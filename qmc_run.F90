@@ -7,10 +7,12 @@ program qmc_run
   use omp_lib, only: omp_get_max_threads
 #endif
   use types_const, only: dp
+  use qmc_input
   use qmc
   use reblocking
   implicit none
 
+  type(t_sys) :: sys
   type(t_qmc_data) :: qmc_data
   integer, parameter :: NW=2**11
   integer, parameter :: Nsteps=2**16
@@ -18,6 +20,11 @@ program qmc_run
   !real(dp), parameter :: timestep=0.8_dp ! for pure Metropolis VMC
   real(dp), parameter :: VMCtstep=0.1_dp
   real(dp), parameter :: DMCtstep=0.01_dp
+
+  ! watch out for the DMC acceptance ratio at larger Znuc - smaller timestep is
+  ! needed in the high-density region (or smarter moves such as Umrigar,
+  ! Nightingale & Runge
+  call init_sys(sys,2.0_dp)
 
 #ifdef _OPENMP
   ! the return value of omp_get_max_threads() is controlled by
@@ -27,25 +34,25 @@ program qmc_run
   Nthreads=1
 #endif
   print *, "number of threads:", Nthreads
-  call init_qmc_data(qmc_data,NW,Nthreads)
+  call init_qmc_data(qmc_data,sys,NW,Nthreads)
 
   ! thermalization
   call init_qmc(qmc_data,VMCtstep,2048)
-  call vmc_run(qmc_data)
+  call vmc_run(qmc_data,sys)
 
   ! actual data harvest
   call init_qmc(qmc_data,VMCtstep,Nsteps)
-  call vmc_run(qmc_data)
+  call vmc_run(qmc_data,sys)
 
   call process_results("Evmc_trace.dat","Evmc_reblock.dat","E2vmc_reblock.dat")
 
   ! thermalization
   call init_qmc(qmc_data,DMCtstep,2048)
-  call dmc_run(qmc_data)
+  call dmc_run(qmc_data,sys)
 
   ! actual data harvest
   call init_qmc(qmc_data,DMCtstep,Nsteps)
-  call dmc_run(qmc_data)
+  call dmc_run(qmc_data,sys)
 
   call process_results("Edmc_trace.dat","Edmc_reblock.dat","E2dmc_reblock.dat")
 

@@ -1,5 +1,5 @@
-! You need to supply 2 subroutines: EL_drift(wlkr) and psiT2(wlkr) in module
-! dmc_input
+! You need to supply 2 subroutines:
+! EL_drift(sys,wlkr) and psiT2(sys,wlkr) in module dmc_input
 
 ! The derived type t_qmc_data contains allocatable arrays which is not
 ! possible in standard Fortran95. It is defined as TR15581 extension to F95
@@ -62,11 +62,12 @@ module qmc
 
 contains
 
-  subroutine init_qmc_data(qmc_data,NW_opt,N_threads)
+  subroutine init_qmc_data(qmc_data,sys,NW_opt,N_threads)
     ! {{{ initialization of the QMC process (common stuf for VMC and DMC),
     !     the storage is unnecessarily large for VMC but it should not matter
     !     much considering our goals
     type(t_qmc_data), intent(inout) :: qmc_data
+    type(t_sys), intent(in) :: sys
     integer, intent(in) :: NW_opt, N_threads
     integer :: error
 
@@ -91,13 +92,14 @@ contains
     call rnd_init(qmc_data%rnd_state)
 
     ! initialize the walker population
-    call randomize_walker_population(qmc_data)
+    call randomize_walker_population(qmc_data,sys)
     ! }}}
   end subroutine init_qmc_data
 
-  subroutine randomize_walker_population(qmc_data)
+  subroutine randomize_walker_population(qmc_data,sys)
     ! {{{ initial random population of walkers, this can be single thread
     type(t_qmc_data), intent(inout) :: qmc_data
+    type(t_sys), intent(in) :: sys
     type(rnd_state_vector) :: rnd_state
     real(dp) :: x
     integer :: i, iw, NW
@@ -108,11 +110,9 @@ contains
           call ran1(rnd_state,x)
           qmc_data%walker(iw)%r(i)=x-0.5_dp
        end do
-       call EL_drift(qmc_data%walker(i))
+       call EL_drift(sys,qmc_data%walker(i))
     end do
     qmc_data%NW=NW
-    qmc_data%walker%age=0
-    qmc_data%walker%wt=1.0_dp
     qmc_data%ET=sum(qmc_data%walker%EL)/qmc_data%NWopt
     qmc_data%rnd_state(1)=rnd_state
     ! }}}
@@ -124,14 +124,22 @@ contains
     real(dp), intent(in) :: t_step
     integer, intent(in) :: N_steps
     integer :: error
+
+    ! parameters of the walk
     qmc_data%tau=t_step
     qmc_data%sqrtau=sqrt(t_step)
+    qmc_data%Nsteps=N_steps
+
+    ! reset counters
     qmc_data%accepted_moves=0
     qmc_data%total_moves=0
     qmc_data%too_old=0
+
+    ! reset walkers (but we want to keep positions etc.)
     qmc_data%walker%age=0
     qmc_data%walker%wt=1.0_dp
-    qmc_data%ET=sum(qmc_data%walker%EL)/qmc_data%NWopt
+
+    ! arrays for measuring observables
     if ( allocated(qmc_data%Etot) ) deallocate(qmc_data%Etot)
     if ( allocated(qmc_data%Etot2) ) deallocate(qmc_data%Etot2)
     if ( allocated(qmc_data%EtotG) ) deallocate(qmc_data%EtotG)
@@ -141,7 +149,6 @@ contains
        print *, "qmc_init: cannot allocate arrays of energies."
        stop
     end if
-    qmc_data%Nsteps=N_steps
     ! }}}
   end subroutine init_qmc
 
@@ -149,10 +156,11 @@ contains
   ! variational Monte Carlo
   ! ==========================================================================
 
-  function vmc_walker_move(vmc_data,rnd_state,iwlkr) result(accept)
+  function vmc_walker_move(vmc_data,sys,rnd_state,iwlkr) result(accept)
     ! {{{ VMC step on a single walker, all electrons are moved at once;
     !     we want this to be thread safe
     type(t_qmc_data), intent(inout) :: vmc_data
+    type(t_sys), intent(in) :: sys
     type(rnd_state_vector), intent(inout) :: rnd_state
     integer, intent(in) :: iwlkr
     integer :: accept
@@ -172,7 +180,7 @@ contains
        call ran1(rnd_state,vrnd(i))
     end do
     wlkr%r = vmc_data%walker(iwlkr)%r + vmc_data%tau*(vrnd-0.5_dp)
-    call psiT2(wlkr)
+    call psiT2(sys,wlkr)
     r = wlkr%psiTsq / vmc_data%walker(iwlkr)%psiTsq
 
 #else
@@ -192,7 +200,7 @@ contains
     ri = vmc_data%walker(iwlkr)%r
     rf = ri + vmc_data%sqrtau*vrnd + vDi*vmc_data%tau
     wlkr%r = rf
-    call EL_drift(wlkr)
+    call EL_drift(sys,wlkr)
     vDf=wlkr%vD
     q = 0.5_dp*vmc_data%tau*(sum(vDi*vDi)-sum(vDf*vDf)) &
          + sum( (ri-rf)*(vDi+vDf) )
@@ -205,7 +213,7 @@ contains
     call ran1(rnd_state,y)   ! y is always less than 1
     if ( y < r ) then
 #ifndef VMC_DIFFUSION_DRIFT
-       call EL_drift(wlkr)   ! for diffusion-drift this is already done
+       call EL_drift(sys,wlkr)   ! for diffusion-drift this is already done
 #endif
        vmc_data%walker(iwlkr)=wlkr
        vmc_data%walker(iwlkr)%age=0
@@ -217,9 +225,10 @@ contains
     ! }}}
   end function vmc_walker_move
 
-  function vmc_step_thread(vmc_data,threadID,iwMin,iwMax) result(accept)
+  function vmc_step_thread(vmc_data,sys,threadID,iwMin,iwMax) result(accept)
     ! {{{ VMC moves on a chunk of the total population
     type(t_qmc_data), intent(inout) :: vmc_data
+    type(t_sys), intent(in) :: sys
     integer, intent(in) :: threadID, iwMin, iwMax
     integer :: accept
     type(rnd_state_vector) :: rnd_state
@@ -227,15 +236,16 @@ contains
     rnd_state=vmc_data%rnd_state(threadID)
     accept=0
     do iw=iwMin, iwMax
-       accept=accept+vmc_walker_move(vmc_data,rnd_state,iw)
+       accept=accept+vmc_walker_move(vmc_data,sys,rnd_state,iw)
     end do
     vmc_data%rnd_state(threadID)=rnd_state
     ! }}}
   end function vmc_step_thread
 
-  subroutine vmc_run(vmc_data)
+  subroutine vmc_run(vmc_data,sys)
     ! {{{ the whole VMC run
     type(t_qmc_data), intent(inout) :: vmc_data
+    type(t_sys), intent(in) :: sys
     integer, dimension(:), allocatable :: limits, accept
     real(dp), dimension(:), allocatable :: Etot, Etot2
     integer :: j, k, chunk, Nthreads, NW, Nsteps, istep, error
@@ -267,7 +277,7 @@ contains
        !schedule(dynamic) schedule(dynamic,10) schedule(static)
        !$omp parallel do default(shared) private(k) schedule(guided,1)
        do k=1, Nthreads
-          accept(k)=vmc_step_thread(vmc_data,k,limits(k)+1,limits(k+1))
+          accept(k)=vmc_step_thread(vmc_data,sys,k,limits(k)+1,limits(k+1))
           do j=limits(k)+1, limits(k+1)
              Etot(k)=Etot(k)+vmc_data%walker(j)%EL
              Etot2(k)=Etot2(k)+vmc_data%walker(j)%EL**2
@@ -291,11 +301,12 @@ contains
   ! diffusion Monte Carlo
   ! ==========================================================================
 
-  function dmc_walker_move(dmc_data,rnd_state,iwlkr) result(accept)
+  function dmc_walker_move(dmc_data,sys,rnd_state,iwlkr) result(accept)
     ! {{{ (pure) DMC step on a single walker using an all-electrons move;
     !     NB: this is the same as VMC diffusion-drift move, extra is only
     !     the weight and the fixed-node constraint
     type(t_qmc_data), intent(inout) :: dmc_data
+    type(t_sys), intent(in) :: sys
     type(rnd_state_vector), intent(inout) :: rnd_state
     integer, intent(in) :: iwlkr
     integer :: accept
@@ -313,7 +324,7 @@ contains
     ri = dmc_data%walker(iwlkr)%r
     rf = ri + dmc_data%sqrtau*vrnd + vDi*dmc_data%tau
     wlkr%r = rf
-    call EL_drift(wlkr)
+    call EL_drift(sys,wlkr)
 
     ! calculation of weight
     ELi=dmc_data%walker(iwlkr)%EL
@@ -357,9 +368,10 @@ contains
     ! }}}
   end function dmc_walker_move
 
-  function dmc_step_thread(dmc_data,threadID,iwMin,iwMax) result(accept)
+  function dmc_step_thread(dmc_data,sys,threadID,iwMin,iwMax) result(accept)
     ! {{{ DMC moves on a chunk of the total population
     type(t_qmc_data), intent(inout) :: dmc_data
+    type(t_sys), intent(in) :: sys
     integer, intent(in) :: threadID, iwMin, iwMax
     integer :: accept
     type(rnd_state_vector) :: rnd_state
@@ -367,15 +379,16 @@ contains
     rnd_state=dmc_data%rnd_state(threadID)
     accept=0
     do iw=iwMin, iwMax
-       accept=accept+dmc_walker_move(dmc_data,rnd_state,iw)
+       accept=accept+dmc_walker_move(dmc_data,sys,rnd_state,iw)
     end do
     dmc_data%rnd_state(threadID)=rnd_state
     ! }}}
   end function dmc_step_thread
 
-  subroutine dmc_run(dmc_data)
+  subroutine dmc_run(dmc_data,sys)
     ! {{{ the whole DMC run
     type(t_qmc_data), intent(inout) :: dmc_data
+    type(t_sys), intent(in) :: sys
     type(rnd_state_vector) :: rnd_state
     integer, dimension(:), allocatable :: limits, accept
     integer :: j, k, chunk, Nthreads, NW, Nsteps, istep, error, kstart
@@ -394,6 +407,9 @@ contains
        stop
     end if
 
+    ! initial trial energy
+    dmc_data%ET=sum(dmc_data%walker%EL)/NW
+
     ! one DMC step is one move of each walker in the population
     do istep=1, Nsteps
 
@@ -410,7 +426,7 @@ contains
        !schedule(dynamic) schedule(dynamic,10) schedule(static)
        !$omp parallel do default(shared) private(k) schedule(guided,1)
        do k=1, Nthreads
-          accept(k)=dmc_step_thread(dmc_data,k,limits(k)+1,limits(k+1))
+          accept(k)=dmc_step_thread(dmc_data,sys,k,limits(k)+1,limits(k+1))
        end do
        !$omp end parallel do
 

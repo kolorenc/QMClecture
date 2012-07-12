@@ -20,9 +20,12 @@ module qmc_input
   private
 
   public :: sys_dim
-  public :: t_walker
+  public :: t_walker, t_sys
+  public :: init_sys
   public :: EL_drift, psiT2
-  
+
+  ! logically, this should go to t_sys, but I really want to keep static arrays
+  ! in t_walker, which enforces this to be a global constant
   integer, parameter :: sys_dim=6       ! dimension of walker
 
   type t_walker
@@ -35,14 +38,18 @@ module qmc_input
      integer :: age=0                   ! how many times rejected by det. bal.
   end type t_walker
 
-  real(dp), parameter :: ZHe=2.0_dp
-  real(dp), parameter :: a=4*(-123371.0_dp+sqrt(32098719641.0_dp))/2539875.0_dp
+  type t_sys
+     real(dp) :: Znuc=2.0_dp            ! nuclear charge
 
-  !real(dp), parameter :: ZHe=1.0_dp
-  !real(dp), parameter :: a=2*(-685.0_dp+3*sqrt(153862015.0_dp))/800167.0_dp
+     ! parameter in the Hylleraas ansatz
+     ! a=4*(-123371.0_dp+sqrt(32098719641.0_dp))/2539875.0_dp for Znuc=2
+     ! a=2*(-685.0_dp+3*sqrt(153862015.0_dp))/800167.0_dp for Znuc=1
+     real(dp) :: a=0.08786283656089399052453400224163986218292_dp
 
-  real(dp), parameter :: Z1=ZHe-5.0_dp/16.0_dp  ! effective charge for 1s wave
-  real(dp), parameter :: b_cusp=0.5_dp
+     ! parameters in the Slater-Jastrow ansatz
+     real(dp) :: Z1=27.0_dp/16.0_dp     ! effective charge in the s wave
+     real(dp) :: b=0.5_dp               ! denominator in the ee-cusp term
+  end type t_sys
 
   interface EL_drift
      module procedure EL_drift_all_cusps
@@ -54,14 +61,46 @@ module qmc_input
 
 contains
 
+  subroutine init_sys(sys,Znuc)
+    ! {{{ initialize the system and wave-function parameters
+    type(t_sys), intent(inout) :: sys
+    real(dp), intent(in) :: Znuc
+    sys%Znuc=Znuc
+    sys%Z1=Znuc-5.0_dp/16.0_dp
+    sys%a=(2*(Znuc**2*(18105 -                &
+              2*Znuc*(-18912 +                &
+                 Znuc*(-1848 + Znuc*(16329 + 8*Znuc*(1301 + 256*Znuc))) &
+                 )) + sqrt(Znuc**4*           &
+             (128388465 +                     &
+               2*Znuc*(327330432 +            &
+                  Znuc*(667667520 +           &
+                     Znuc*(730902672 +        &
+                        Znuc*                 &
+                         (733280304 +         &
+                          Znuc*               &
+                          (1064874760 +       &
+                          Znuc*               &
+                          (1264584679 +       &
+                          16*Znuc*            &
+                          (56671967 +         &
+                          8*Znuc*             &
+                          (2950393 + 512*Znuc*(1309 + 128*Znuc))) &
+                          ))))))))))/         &
+       (3.*(-98910 + Znuc*(-43776 +           &
+              Znuc*(304160 + Znuc*(413413 + 4096*Znuc*(47 + 8*Znuc))))) &
+         )
+    ! }}}
+  end subroutine init_sys
+
   ! ===========================================================================
   ! simple trial wave function, just a product of two s orbitals with effective
   ! charge; all cusps are broken when the effective charge deviates from 2;
   ! the earliest reference I could find is [Kellner, Z. Phys. 44, 91 (1927)]
   ! ===========================================================================
 
-  subroutine EL_drift_no_cusp(wlkr)
+  subroutine EL_drift_no_cusp(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared
+    type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l, r12l
     real(dp), dimension(3) :: r1, r2
@@ -70,16 +109,17 @@ contains
     r1l=sqrt(sum(r1**2))
     r2l=sqrt(sum(r2**2))
     r12l=sqrt(sum((r1-r2)**2))
-    wlkr%EL=-Z1**2-(ZHe-Z1)*(1.0_dp/r1l+1.0_dp/r2l)+1.0_dp/r12l
-    wlkr%psiTsq=exp(-2.0_dp*Z1*(r1l+r2l))
-    wlkr%vD(1:3)=-Z1*r1/r1l
-    wlkr%vD(4:6)=-Z1*r2/r2l
+    wlkr%EL=-sys%Z1**2-(sys%Znuc-sys%Z1)*(1.0_dp/r1l+1.0_dp/r2l)+1.0_dp/r12l
+    wlkr%psiTsq=exp(-2.0_dp*sys%Z1*(r1l+r2l))
+    wlkr%vD(1:3)=-sys%Z1*r1/r1l
+    wlkr%vD(4:6)=-sys%Z1*r2/r2l
     wlkr%sgn=1
     ! }}}
   end subroutine EL_drift_no_cusp
 
-  subroutine psiT2_no_cusp(wlkr)
+  subroutine psiT2_no_cusp(sys,wlkr)
     ! {{{ trial wave-function squared
+    type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l
     real(dp), dimension(3) :: r1, r2
@@ -87,7 +127,7 @@ contains
     r2=wlkr%r(4:6)
     r1l=sqrt(sum(r1**2))
     r2l=sqrt(sum(r2**2))
-    wlkr%psiTsq=exp(-2.0_dp*Z1*(r1l+r2l))
+    wlkr%psiTsq=exp(-2.0_dp*sys%Z1*(r1l+r2l))
     ! }}}
   end subroutine psiT2_no_cusp
 
@@ -98,9 +138,10 @@ contains
   ! 5593 (1982)] but this functional form is surely older
   ! ===========================================================================
 
-  subroutine EL_drift_ee_cusp(wlkr)
+  subroutine EL_drift_ee_cusp(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared, implemented
     !     electron-electron cusp
+    type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l, r12l, denom
     real(dp), dimension(3) :: r1, r2, r12, grad1_Jw, grad1_psi0, grad2_psi0
@@ -110,22 +151,23 @@ contains
     r2l=sqrt(sum(r2**2))
     r12=r1-r2
     r12l=sqrt(sum(r12**2))
-    denom=1.0_dp+b_cusp*r12l
+    denom=1.0_dp+sys%b*r12l
     grad1_Jw=r12/r12l/2.0_dp/denom**2
-    grad1_psi0=-Z1*r1/r1l
-    grad2_psi0=-Z1*r2/r2l
-    wlkr%EL=-Z1**2-(ZHe-Z1)*(1.0_dp/r1l+1.0_dp/r2l) &
-         & +b_cusp/denom**3+b_cusp*(2.0_dp+b_cusp*r12l)/denom**2 &
+    grad1_psi0=-sys%Z1*r1/r1l
+    grad2_psi0=-sys%Z1*r2/r2l
+    wlkr%EL=-sys%Z1**2-(sys%Znuc-sys%Z1)*(1.0_dp/r1l+1.0_dp/r2l) &
+         & +sys%b/denom**3+sys%b*(2.0_dp+sys%b*r12l)/denom**2 &
          & -sum(grad1_Jw**2)-sum(grad1_psi0*grad1_Jw)+sum(grad2_psi0*grad1_Jw)
-    wlkr%psiTsq=exp(-2.0_dp*Z1*(r1l+r2l)+r12l/denom)
+    wlkr%psiTsq=exp(-2.0_dp*sys%Z1*(r1l+r2l)+r12l/denom)
     wlkr%vD(1:3)=grad1_psi0+grad1_Jw
     wlkr%vD(4:6)=grad2_psi0-grad1_Jw
     wlkr%sgn=1
     ! }}}
   end subroutine EL_drift_ee_cusp
 
-  subroutine psiT2_ee_cusp(wlkr)
+  subroutine psiT2_ee_cusp(sys,wlkr)
     ! {{{ trial wave-function squared
+    type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l, r12l, denom
     real(dp), dimension(3) :: r1, r2
@@ -134,8 +176,8 @@ contains
     r1l=sqrt(sum(r1**2))
     r2l=sqrt(sum(r2**2))
     r12l=sqrt(sum((r1-r2)**2))
-    denom=1.0_dp+b_cusp*r12l
-    wlkr%psiTsq=exp(-2.0_dp*Z1*(r1l+r2l)+r12l/denom)
+    denom=1.0_dp+sys%b*r12l
+    wlkr%psiTsq=exp(-2.0_dp*sys%Z1*(r1l+r2l)+r12l/denom)
     ! }}}
   end subroutine psiT2_ee_cusp
 
@@ -149,8 +191,9 @@ contains
   ! (English translation is in the Hettema's book)
   ! ===========================================================================
 
-  subroutine EL_drift_all_cusps(wlkr)
+  subroutine EL_drift_all_cusps(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared
+    type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp), dimension(3) :: r1, r2, r12
     real(dp) :: u, v, w, u2, v2, w2, v2_w2, vw, vDu, vDv, vDw
@@ -165,22 +208,23 @@ contains
     w=sqrt(w2)
     v2_w2=v2+w2
     vw=v*w
-    wlkr%PsiTsq=((2 + u)**2*(1 + a*v2_w2)**2)/(4*exp(2*(v + w)*ZHe))
-    wlkr%EL=(2*u*vw*(1 + a*(-12 - 8*u + v2_w2)) + &
-         (v + w)*(8*a*u*vw - (v - w)**2*(1 + a*v2_w2) + &
-            u**2*(1 + a*(v2_w2 + 4*v*w)))*ZHe - &
-         2*u*(2 + u)*vw*(1 + a*v2_w2)*ZHe**2)/ &
-       (2*u*(2 + u)*vw*(1 + a*v2_w2))
+    wlkr%PsiTsq=((2 + u)**2*(1 + sys%a*v2_w2)**2)/(4*exp(2*(v + w)*sys%Znuc))
+    wlkr%EL=(2*u*vw*(1 + sys%a*(-12 - 8*u + v2_w2)) + &
+         (v + w)*(8*sys%a*u*vw - (v - w)**2*(1 + sys%a*v2_w2) + &
+            u**2*(1 + sys%a*(v2_w2 + 4*v*w)))*sys%Znuc - &
+         2*u*(2 + u)*vw*(1 + sys%a*v2_w2)*sys%Znuc**2)/ &
+       (2*u*(2 + u)*vw*(1 + sys%a*v2_w2))
     vDu=1/(2+u)
-    vDv=2*a*v/(1+a*v2_w2)-ZHe
-    vDw=2*a*w/(1+a*v2_w2)-ZHe
+    vDv=2*sys%a*v/(1+sys%a*v2_w2)-sys%Znuc
+    vDw=2*sys%a*w/(1+sys%a*v2_w2)-sys%Znuc
     wlkr%vD(1:3)=vDv*r1/v+vDu*r12/u
     wlkr%vD(4:6)=vDw*r2/w-vDu*r12/u
     ! }}}
   end subroutine EL_drift_all_cusps
 
-  subroutine psiT2_all_cusps(wlkr)
+  subroutine psiT2_all_cusps(sys,wlkr)
     ! {{{ trial wave-function squared
+    type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp), dimension(3) :: r1, r2, r12
     real(dp) :: u, v, w, u2, v2, w2, v2_w2
@@ -194,7 +238,7 @@ contains
     v=sqrt(v2)
     w=sqrt(w2)
     v2_w2=v2+w2
-    wlkr%PsiTsq=((2 + u)**2*(1 + a*v2_w2)**2)/(4*exp(2*(v + w)*ZHe))
+    wlkr%PsiTsq=((2 + u)**2*(1 + sys%a*v2_w2)**2)/(4*exp(2*(v + w)*sys%Znuc))
     ! }}}
   end subroutine PsiT2_all_cusps
 
