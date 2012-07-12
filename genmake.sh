@@ -181,7 +181,7 @@ FC =ifort
 OPT=-O2 -pc80 -ip -openmp -openmp-report=2 #-reentrancy threaded
 # -stand f03 , -stand f95 , -stand f90 ...to check compliance with standards
 # note that -warn by default also makes those stupid files *__genmod.f90
-FFLAGS  =\$(OPT) -warn -stand f03
+FFLAGS  =\$(OPT) -warn all -stand f03
 F77FLAGS=\$(OPT) -warn nousage  # no warnings about obsolete Fortran constructs
 LDFLAGS =-openmp #-reentrancy threaded
 LIBS=

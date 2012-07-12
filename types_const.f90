@@ -25,12 +25,4 @@ module types_const
   real(dp), parameter :: sqrt3=1.732050807568877293527446341505872366943_sp
   real(dp), parameter :: sqrt5=2.236067977499789696409173668731276235441_sp
 
-  type one_vec
-     real(dp), dimension(:), allocatable :: vec
-  end type one_vec
-
-  type one_mtrx
-     real(dp), dimension(:,:), allocatable :: mtrx
-  end type one_mtrx
-
 end module types_const

@@ -6,6 +6,14 @@
 !  "no cusp", Z1=2-5/16       -2.84766
 !  "all cusps", a=0.0878628   -2.89537
 
+! Hartree-Fock limit: -2.8617
+! [Physical chemistry: a molecular approach By Donald Allan McQuarrie,
+! John Douglas Simon, p. 283]
+
+! Exact energy:   -2.903724
+! [C. Schwartz, arXiv:physics/0208004v1, published as Int. J. Mod. Phys. E 15,
+! 877 (2006)]
+
 module qmc_input
   use types_const, only: dp
   implicit none
@@ -22,14 +30,19 @@ module qmc_input
      real(dp), dimension(sys_dim) :: vD ! drift velocity
      real(dp) :: EL                     ! local energy  
      real(dp) :: psiTsq                 ! square of trial wavefunction
-     integer :: sgn                     ! sign of trial wavefunction at r
-     integer :: age                     ! how many times rejected by det. bal.
+     real(dp) :: wt=1.0_dp              ! DMC weight
+     integer :: sgn=1                   ! sign of trial wavefunction at r
+     integer :: age=0                   ! how many times rejected by det. bal.
   end type t_walker
 
   real(dp), parameter :: ZHe=2.0_dp
+  real(dp), parameter :: a=4*(-123371.0_dp+sqrt(32098719641.0_dp))/2539875.0_dp
+
+  !real(dp), parameter :: ZHe=1.0_dp
+  !real(dp), parameter :: a=2*(-685.0_dp+3*sqrt(153862015.0_dp))/800167.0_dp
+
   real(dp), parameter :: Z1=ZHe-5.0_dp/16.0_dp  ! effective charge for 1s wave
   real(dp), parameter :: b_cusp=0.5_dp
-  real(dp), parameter :: a=4*(-123371.0_dp+sqrt(32098719641.0_dp))/2539875.0_dp
 
   interface EL_drift
      module procedure EL_drift_all_cusps
@@ -43,7 +56,8 @@ contains
 
   ! ===========================================================================
   ! simple trial wave function, just a product of two s orbitals with effective
-  ! charge; all cusps are broken when the effective charge deviates from 2
+  ! charge; all cusps are broken when the effective charge deviates from 2;
+  ! the earliest reference I could find is [Kellner, Z. Phys. 44, 91 (1927)]
   ! ===========================================================================
 
   subroutine EL_drift_no_cusp(wlkr)
@@ -79,7 +93,9 @@ contains
 
 
   ! ===========================================================================
-  ! the above function multiplied by a cusp-fixing Jastrow factor
+  ! the above function multiplied by an e-e cusp-fixing Jastrow factor,
+  ! see for instance [Reynolds, Ceperley, Alder & Lester, J. Chem. Phys. 77,
+  ! 5593 (1982)] but this functional form is surely older
   ! ===========================================================================
 
   subroutine EL_drift_ee_cusp(wlkr)
@@ -128,7 +144,9 @@ contains
   ! wave function of the Hylleraas form, cusps fullfiled; there is only a
   ! single variational parameter and hence the energy is no miracle, but it is
   ! possible to analytically optimize this single parameter from start to
-  ! finish (although it is tedious for sure)
+  ! finish (although it is tedious for sure);
+  ! see [Hylleraas, Z. Phys. 54, 347 (1929)] but he does not care about cusps
+  ! (English translation is in the Hettema's book)
   ! ===========================================================================
 
   subroutine EL_drift_all_cusps(wlkr)
