@@ -17,7 +17,7 @@
 ! survived here anyway.
 !
 ! NB: gfortran needs -fno-strict-overflow, otherwise 'arith assump 3 fails'
-! in rnd_init()
+! in rnd_init(); gfortran's -pedantic will discover range overflows
 !
 ! Some sites to check (Mersenne Twister)
 !   http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
