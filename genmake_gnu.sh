@@ -178,10 +178,9 @@ tab=`printf "%b" "\t"`
 
 cat << EOF
 FC =gfortran-mp-4.6
-OPT=-O2 -fopenmp -fno-strict-overflow -fdefault-integer-8
-# -stand f03 , -stand f95 , -stand f90 ...to check compliance with standards
-# note that -warn by default also makes those stupid files *__genmod.f90
-FFLAGS  =\$(OPT)
+OPT=-O2 -fopenmp -fno-strict-overflow
+# -std=f2003 , -std=f95 ...to check compliance with standards
+FFLAGS  =\$(OPT) -Wall -std=f2003
 F77FLAGS=\$(OPT)
 LDFLAGS =-fopenmp
 LIBS=
