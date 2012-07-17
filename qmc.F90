@@ -6,6 +6,7 @@
 ! (which is a part of F03).
 
 #define VMC_DIFFUSION_DRIFT 1
+#define ET_RUNNING_AVERAGE 1
 
 module qmc
   use types_const, only: dp, i8b
@@ -151,6 +152,7 @@ contains
     end if
     ! }}}
   end subroutine init_qmc
+
 
   ! ==========================================================================
   ! variational Monte Carlo
@@ -393,7 +395,7 @@ contains
     integer, dimension(:), allocatable :: limits, accept
     integer :: j, k, chunk, Nthreads, NW, Nsteps, istep, error, kstart
     integer :: num
-    real(dp) :: Etot, Etot2, y
+    real(dp) :: Etot, Etot2, y, ET
 
     Nthreads=dmc_data%Nthreads
     NW=dmc_data%NW
@@ -409,6 +411,7 @@ contains
 
     ! initial trial energy
     dmc_data%ET=sum(dmc_data%walker%EL)/NW
+    ET=0.0_dp
 
     ! one DMC step is one move of each walker in the population
     do istep=1, Nsteps
@@ -478,7 +481,19 @@ contains
        Etot=Etot/NW
        dmc_data%Etot(istep)=Etot
        dmc_data%Etot2(istep)=Etot2/NW
+
+#ifdef ET_RUNNING_AVERAGE
+       ! trial energy as the best estimate we have so far (this looks like it
+       ! can be biased by initial projection)
+       ET=ET+Etot          !sum(dmc_data%Etot(1:istep))/istep
+       dmc_data%ET=ET/istep-log(NW*1.0_dp/dmc_data%NWopt)
+#else
+       ! trial energy as an average over the population at each time step (this
+       ! should fluctuate more but these fluctuations are possibly overshadowed
+       ! by the population-control term enyway)
        dmc_data%ET=Etot-log(NW*1.0_dp/dmc_data%NWopt)
+#endif
+
        !dmc_data%EtotG(istep)=dmc_data%ET
        dmc_data%NWtr(istep)=NW
 
