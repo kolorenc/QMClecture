@@ -59,7 +59,7 @@ module qmc
 
      ! state of the random number generator for each thread
      integer :: Nthreads
-     type(rnd_state_vector), dimension(:), allocatable :: rnd_state
+     type(t_rnd_state), dimension(:), allocatable :: rnd_state
 
      character(128) :: method_id=""  ! identification of the method used
 
@@ -117,7 +117,7 @@ contains
     ! {{{ initial random population of walkers, this can be single thread
     type(t_qmc_data), intent(inout) :: qmc_data
     type(t_sys), intent(in) :: sys
-    type(rnd_state_vector) :: rnd_state
+    type(t_rnd_state) :: rnd_state
     real(dp) :: x
     integer :: i, iw, NW
     rnd_state=qmc_data%rnd_state(1)
@@ -179,7 +179,7 @@ contains
   subroutine move_metropolis(vmc_data,rnd_state,wlkr_i,wlkr_f)
     ! {{{ simple move using just homogeneous random numbers
     type(t_qmc_data), intent(in) :: vmc_data
-    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_rnd_state), intent(inout) :: rnd_state
     type(t_walker), intent(in) :: wlkr_i
     type(t_walker), intent(out) :: wlkr_f
     real(dp), dimension(sys_dim) :: dr
@@ -203,7 +203,7 @@ contains
   subroutine move_diffusion_drift(qmc_data,rnd_state,wlkr_i,wlkr_f,vDlimit)
     ! {{{ diffusion and drift move for DMC (and improved VMC)
     type(t_qmc_data), intent(in) :: qmc_data
-    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_rnd_state), intent(inout) :: rnd_state
     type(t_walker), intent(in) :: wlkr_i
     type(t_walker), intent(out) :: wlkr_f
     logical, intent(in) :: vDlimit     ! do not set .true. in DMC!
@@ -259,7 +259,7 @@ contains
     !     we want this to be thread safe
     type(t_qmc_data), intent(inout) :: vmc_data
     type(t_sys), intent(in) :: sys
-    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_rnd_state), intent(inout) :: rnd_state
     integer, intent(in) :: iwlkr
     integer :: accept
     type(t_walker) :: wlkr
@@ -319,7 +319,7 @@ contains
     type(t_sys), intent(in) :: sys
     integer, intent(in) :: threadID, iwMin, iwMax
     integer :: accept
-    type(rnd_state_vector) :: rnd_state
+    type(t_rnd_state) :: rnd_state
     integer :: iw
     rnd_state=vmc_data%rnd_state(threadID)
     accept=0
@@ -401,7 +401,7 @@ contains
     !     the weight and the fixed-node constraint
     type(t_qmc_data), intent(inout) :: dmc_data
     type(t_sys), intent(in) :: sys
-    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_rnd_state), intent(inout) :: rnd_state
     integer, intent(in) :: iwlkr
     integer :: accept, age
     real(dp) :: ELi, r, y
@@ -458,7 +458,7 @@ contains
     type(t_sys), intent(in) :: sys
     integer, intent(in) :: threadID, iwMin, iwMax
     integer :: accept
-    type(rnd_state_vector) :: rnd_state
+    type(t_rnd_state) :: rnd_state
     integer :: iw
     rnd_state=dmc_data%rnd_state(threadID)
     accept=0
@@ -473,7 +473,7 @@ contains
     ! {{{ the whole DMC run
     type(t_qmc_data), intent(inout) :: dmc_data
     type(t_sys), intent(in) :: sys
-    type(rnd_state_vector) :: rnd_state
+    type(t_rnd_state) :: rnd_state
     integer, dimension(:), allocatable :: limits, accept
     integer :: j, k, chunk, Nthreads, NW, Nsteps, istep, error, kstart
     integer :: num

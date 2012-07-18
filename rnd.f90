@@ -33,18 +33,18 @@ module rnd
   public :: rnd_init
   public :: ran1
   public :: gasdev
-  public :: rnd_state_vector
+  public :: t_rnd_state
 
   integer, parameter :: k4b=selected_int_kind(9)
   integer(k4b), parameter :: hg=huge(1_k4b), hgm=-hg, hgng=hgm-1
   integer(k4b), parameter :: seq=0
   real(dp), save :: amm
 
-  type rnd_state_vector
+  type t_rnd_state
      integer(k4b) ::  iran, jran, kran, nran, mran, ranv
      real(dp) :: g
      logical :: gaus_stored
-  end type rnd_state_vector
+  end type t_rnd_state
 
 contains
 
@@ -52,7 +52,7 @@ contains
     ! {{{ initialize an array of generator state vectors, one such vector
     !     for each thread
     implicit none
-    type(rnd_state_vector), dimension(:), intent(out) :: rnd_state
+    type(t_rnd_state), dimension(:), intent(out) :: rnd_state
     integer(k4b) :: j, hgt, length
     integer(k4b), dimension(:,:), allocatable :: ranseeds
 
@@ -122,7 +122,7 @@ contains
     !     assumed by this generator is tested in rnd_init().
     !     [NR F90, chapter B7, page 1149]
     implicit none
-    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_rnd_state), intent(inout) :: rnd_state
     real(dp), intent(out) :: harvest
     rnd_state%ranv=rnd_state%iran-rnd_state%kran
     if (rnd_state%ranv < 0) rnd_state%ranv=rnd_state%ranv+2147483579_k4b
@@ -144,7 +144,7 @@ contains
   subroutine gasdev(rnd_state,harvest)
     ! {{{ Returns in harvest a normally distributed deviate with zero mean
     !     and unit variance, using ran1 as the source of uniform deviates.
-    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_rnd_state), intent(inout) :: rnd_state
     real(dp), intent(out) :: harvest
     real(dp) :: rsq,v1,v2
     if (rnd_state%gaus_stored) then
