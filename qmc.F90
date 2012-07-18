@@ -19,8 +19,22 @@ module qmc
   public :: init_qmc_data, init_qmc
   public :: vmc_run, dmc_run
 
+  ! room for branched walkers in the allocated array (DMC)
   real(dp), parameter :: q=2.0_dp    ! NWmax/NWopt
-  integer, parameter :: age_limit=30 ! older walkers are "encouraged" to move
+
+  ! diffusion-drift moves: the drift velocity diverges at nodes which leads to
+  ! walkers being trapped near the nodes (the proposed move is so large that
+  ! it is always rejected). The problem is more visible in VMC where the time
+  ! step is larger. In the same time, the VMC can be easily cured by imposing
+  ! a maximum on the magnitude of the drift velocity, see move_diffusion_drift()
+  ! and accept_ratio_diffusion_drift()
+  real(dp), parameter :: vDmax=5.0_dp
+
+  ! in DMC we cannot fool with the drift velocity but we can slighly bias the
+  ! accept-reject step to "encourage" too old walkers to move (but this will
+  ! induce some error, hopefully smaller than the trapping itself), see
+  ! dmc_walker_move()
+  integer, parameter :: age_limit=30
 
   type t_qmc_data
      real(dp) :: tau, sqrtau         ! time step
@@ -155,6 +169,84 @@ contains
 
 
   ! ==========================================================================
+  ! moves
+  ! ==========================================================================
+
+  subroutine move_metropolis(vmc_data,rnd_state,wlkr_i,wlkr_f)
+    ! {{{ simple move using just homogeneous random numbers
+    type(t_qmc_data), intent(in) :: vmc_data
+    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_walker), intent(in) :: wlkr_i
+    type(t_walker), intent(out) :: wlkr_f
+    real(dp), dimension(sys_dim) :: dr
+    integer :: i
+    do i=1, sys_dim
+       call ran1(rnd_state,dr(i))
+    end do
+    wlkr_f%r = wlkr_i%r + vmc_data%tau*(dr-0.5_dp)
+    ! }}}
+  end subroutine move_metropolis
+
+  function accept_ratio_metropolis(wlkr_i,wlkr_f) result(r)
+    ! {{{ ratio for the accept-reject step (detailed balance)
+    type(t_walker), intent(in) :: wlkr_i, wlkr_f
+    real(dp) :: r
+    r = wlkr_f%psiTsq / wlkr_i%psiTsq
+    ! }}}
+  end function accept_ratio_metropolis
+
+
+  subroutine move_diffusion_drift(qmc_data,rnd_state,wlkr_i,wlkr_f,vDlimit)
+    ! {{{ diffusion and drift move for DMC (and improved VMC)
+    type(t_qmc_data), intent(in) :: qmc_data
+    type(rnd_state_vector), intent(inout) :: rnd_state
+    type(t_walker), intent(in) :: wlkr_i
+    type(t_walker), intent(out) :: wlkr_f
+    logical, intent(in) :: vDlimit     ! do not set .true. in DMC!
+    real(dp), dimension(sys_dim) :: dr, vDr
+    integer :: i
+    !
+    ! cap on the drift velocity to avoid trapping in VMC, the same must be done
+    ! in accept_ratio_diffusion_drift()
+    vDr=wlkr_i%vD
+    if ( vDlimit ) then
+       vDr=sign(min(vDmax,abs(vDr)),vDr)
+    end if
+    !
+    do i=1, sys_dim
+       call gasdev(rnd_state,dr(i))
+    end do
+    wlkr_f%r = wlkr_i%r + qmc_data%sqrtau*dr + vDr*qmc_data%tau
+    ! }}}
+  end subroutine move_diffusion_drift
+
+  function accept_ratio_diffusion_drift(qmc_data,wlkr_i,wlkr_f,vDlimit) result(r)
+    ! {{{ ratio for the accept-reject step (detailed balance)
+    type(t_qmc_data), intent(in) :: qmc_data
+    type(t_walker), intent(in) :: wlkr_i, wlkr_f
+    logical, intent(in) :: vDlimit    ! do not set .true. in DMC!
+    real(dp) :: r, q, dt
+    real(dp), dimension(sys_dim) :: vDri, vDrf
+    !
+    ! cap on the drift velocity to avoid trapping in VMC, the same must be done
+    ! in  move_diffusion_drift()
+    vDri=wlkr_i%vD
+    vDrf=wlkr_f%vD
+    if ( vDlimit ) then
+       vDri=sign(min(vDmax,abs(vDri)),vDri)
+       vDrf=sign(min(vDmax,abs(vDrf)),vDrf)
+    end if
+    !
+    dt  = qmc_data%tau
+    q = 0.5_dp * dt * ( &
+         sum( vDri * vDri ) - sum( vDrf * vDrf ) ) &
+         + sum( ( wlkr_i%r - wlkr_f%r )*( vDri + vDrf ) )
+    r = wlkr_f%psiTsq / wlkr_i%psiTsq * exp(q)
+    ! }}}
+  end function accept_ratio_diffusion_drift
+
+
+  ! ==========================================================================
   ! variational Monte Carlo
   ! ==========================================================================
 
@@ -166,10 +258,8 @@ contains
     type(rnd_state_vector), intent(inout) :: rnd_state
     integer, intent(in) :: iwlkr
     integer :: accept
-    real(dp), dimension(sys_dim) :: vrnd, vDi, vDf, ri, rf
     type(t_walker) :: wlkr
-    real(dp) :: r, q, y
-    integer :: i
+    real(dp) :: r, y
 
 #ifndef VMC_DIFFUSION_DRIFT
 
@@ -178,12 +268,10 @@ contains
     ! each of the step is fast;
     ! the first quantum Monte Carlo of this type was
     ! [McMillan, Phys. Rev. 138, A442 (1965)]
-    do i=1, sys_dim
-       call ran1(rnd_state,vrnd(i))
-    end do
-    wlkr%r = vmc_data%walker(iwlkr)%r + vmc_data%tau*(vrnd-0.5_dp)
+
+    call move_metropolis(vmc_data,rnd_state,vmc_data%walker(iwlkr),wlkr)
     call psiT2(sys,wlkr)
-    r = wlkr%psiTsq / vmc_data%walker(iwlkr)%psiTsq
+    r = accept_ratio_metropolis(vmc_data%walker(iwlkr),wlkr)
 
 #else
 
@@ -192,27 +280,21 @@ contains
     ! J. Chem. Phys. 69, 4628 (1978)] but similar "smart" sampling is
     ! described also in [Ceperley, Chester & Kalos, Phys. Rev. B 16,
     ! 3081 (1977)]
-    ! REMEMBER: the proposal probablity is assymetric and hence the ratio
+    ! REMEMBER: the proposal probablity is asymetric and hence the ratio
     ! for accept-reject is more complicated than in the pure Metropolis
     ! [Hastings, Biometrika 57, 97 (1970)]
-    do i=1, sys_dim
-       call gasdev(rnd_state,vrnd(i))
-    end do
-    vDi=vmc_data%walker(iwlkr)%vD
-    ri = vmc_data%walker(iwlkr)%r
-    rf = ri + vmc_data%sqrtau*vrnd + vDi*vmc_data%tau
-    wlkr%r = rf
+
+    call move_diffusion_drift(vmc_data,rnd_state,vmc_data%walker(iwlkr),wlkr, &
+         vDlimit=.true.)
     call EL_drift(sys,wlkr)
-    vDf=wlkr%vD
-    q = 0.5_dp*vmc_data%tau*(sum(vDi*vDi)-sum(vDf*vDf)) &
-         + sum( (ri-rf)*(vDi+vDf) )
-    r = wlkr%psiTsq / vmc_data%walker(iwlkr)%psiTsq * exp(q)
+    r = accept_ratio_diffusion_drift(vmc_data,vmc_data%walker(iwlkr),wlkr, &
+         vDlimit=.true.)
 
 #endif
 
     ! accept-reject
     accept=0
-    call ran1(rnd_state,y)   ! y is always less than 1
+    call ran1(rnd_state,y)       ! y is always less than 1
     if ( y < r ) then
 #ifndef VMC_DIFFUSION_DRIFT
        call EL_drift(sys,wlkr)   ! for diffusion-drift this is already done
@@ -311,36 +393,22 @@ contains
     type(t_sys), intent(in) :: sys
     type(rnd_state_vector), intent(inout) :: rnd_state
     integer, intent(in) :: iwlkr
-    integer :: accept
-    real(dp), dimension(sys_dim) :: vrnd, vDi, vDf, ri, rf
-    real(dp) :: ELi, r, q, y
+    integer :: accept, age
+    real(dp) :: ELi, r, y
     type(t_walker) :: wlkr
-    integer :: i, age
     logical :: acc
 
     ! diffusion-drift
-    do i=1, sys_dim
-       call gasdev(rnd_state,vrnd(i))
-    end do
-    vDi=dmc_data%walker(iwlkr)%vD
-    ri = dmc_data%walker(iwlkr)%r
-    rf = ri + dmc_data%sqrtau*vrnd + vDi*dmc_data%tau
-    wlkr%r = rf
+    call move_diffusion_drift(dmc_data,rnd_state,dmc_data%walker(iwlkr),wlkr, &
+         vDlimit=.false.)
     call EL_drift(sys,wlkr)
 
-    ! calculation of weight
-    ELi=dmc_data%walker(iwlkr)%EL
-    wlkr%wt = dmc_data%walker(iwlkr)%wt * &
-         exp(-dmc_data%tau*0.5_dp*(wlkr%EL+ELi-2.0_dp*dmc_data%ET))
-
-    ! detailed balance
+    ! detailed balance and fixed-node constraint
     acc=.false.
     if ( dmc_data%walker(iwlkr)%sgn == wlkr%sgn ) then
        ! additional detailed balance
-       vDf=wlkr%vD
-       q = 0.5_dp*dmc_data%tau*(sum(vDi*vDi)-sum(vDf*vDf)) &
-            + sum( (ri-rf)*(vDi+vDf) )
-       r = wlkr%psiTsq / dmc_data%walker(iwlkr)%psiTsq * exp(q)
+       r = accept_ratio_diffusion_drift(dmc_data,dmc_data%walker(iwlkr),wlkr, &
+            vDlimit=.false.)
        ! if the walker is stuck for a long time, encourage it to move; this
        ! hack should be needed only for poor trial functions
        age=dmc_data%walker(iwlkr)%age
@@ -352,6 +420,10 @@ contains
        end if
        call ran1(rnd_state,y)
        if ( y < r ) then
+          ! calculation of weight
+          ELi=dmc_data%walker(iwlkr)%EL
+          wlkr%wt = dmc_data%walker(iwlkr)%wt * &
+               exp(-dmc_data%tau*0.5_dp*(wlkr%EL+ELi-2.0_dp*dmc_data%ET))
           dmc_data%walker(iwlkr)=wlkr
           acc=.true.
        else
@@ -360,7 +432,7 @@ contains
     end if
 
     ! this extra condition is needed to correctly increment age (but is this
-    ! really the correct implementation?)
+    ! really the quantity I want to monitor?)
     if ( acc ) then
        accept=1
     else
