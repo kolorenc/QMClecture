@@ -61,6 +61,8 @@ module qmc
      integer :: Nthreads
      type(rnd_state_vector), dimension(:), allocatable :: rnd_state
 
+     character(128) :: method_id=""  ! identification of the method used
+
      ! total energy (average over population, full history over steps)
      real(dp), dimension(:), allocatable :: Etot
 
@@ -153,6 +155,8 @@ contains
     ! reset walkers (but we want to keep positions etc.)
     qmc_data%walker%age=0
     qmc_data%walker%wt=1.0_dp
+
+    qmc_data%method_id=""
 
     ! arrays for measuring observables
     if ( allocated(qmc_data%Etot) ) deallocate(qmc_data%Etot)
@@ -334,6 +338,12 @@ contains
     real(dp), dimension(:), allocatable :: Etot, Etot2
     integer :: j, k, chunk, Nthreads, NW, Nsteps, istep, error
 
+#ifdef VMC_DIFFUSION_DRIFT
+    vmc_data%method_id="VMC with diffusion-drift sampler"
+#else
+    vmc_data%method_id="VMC with simple Metropolis sampler"
+#endif
+
     Nthreads=vmc_data%Nthreads
     NW=vmc_data%NW
     Nsteps=vmc_data%Nsteps
@@ -468,6 +478,12 @@ contains
     integer :: j, k, chunk, Nthreads, NW, Nsteps, istep, error, kstart
     integer :: num
     real(dp) :: Etot, Etot2, y, ET
+
+#ifdef ET_RUNNING_AVERAGE
+    dmc_data%method_id="DMC, trial energy from running mixed estimator"
+#else
+    dmc_data%method_id="DMC, trial energy from the instant population only"
+#endif
 
     Nthreads=dmc_data%Nthreads
     NW=dmc_data%NW
