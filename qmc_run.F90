@@ -59,7 +59,7 @@ program qmc_run
 
   open(unit=extra_unit,file="tstep_ET_instant.dat")
   write(unit=extra_unit,fmt=*) "# time step   energy   errorbar  acc"
-  do i=0, 9
+  do i=0, 0
      ! actual data harvest
      call init_qmc(qmc_data,DMCtstep*(10.0_dp-i)/10.0_dp, &
           int(Nsteps*10.0_dp/(10-i)))
@@ -140,7 +140,7 @@ contains
     print *, "---"
     print *, "variance:", Var, "+/-", errVar
     print *, "correlation length for E^2 (steps):", corrlen
-    print *, "final number of block in the statistics:", finalNblock
+    print *, "final number of blocks in the statistics:", finalNblock
 
     if ( allocated(qmc_data%EtotG) ) then
        En=sum(qmc_data%EtotG)/qmc_data%Nsteps
@@ -152,7 +152,7 @@ contains
     end if
 
     if ( present(extra_unit) ) then
-       write(unit=22,fmt='(4e18.10)') qmc_data%tau, En, errEn, &
+       write(unit=extra_unit,fmt='(4e18.10)') qmc_data%tau, En, errEn, &
             qmc_data%accepted_moves / (1.0_dp*qmc_data%total_moves)
     end if
 
