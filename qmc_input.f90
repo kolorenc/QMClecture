@@ -196,7 +196,7 @@ contains
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp), dimension(3) :: r1, r2, r12
-    real(dp) :: u, v, w, u2, v2, w2, v2_w2, vw, vDu, vDv, vDw
+    real(dp) :: u, v, w, u2, v2, w2, v2_w2, vw, twouvw, vDu, vDv, vDw, Xa, u_2
     r1=wlkr%r(1:3)
     r2=wlkr%r(4:6)
     v2=sum(r1**2)
@@ -208,17 +208,21 @@ contains
     w=sqrt(w2)
     v2_w2=v2+w2
     vw=v*w
-    wlkr%PsiTsq=((2 + u)**2*(1 + sys%a*v2_w2)**2)/(4*exp(2*(v + w)*sys%Znuc))
-    wlkr%EL=(2*u*vw*(1 + sys%a*(-12 - 8*u + v2_w2)) + &
-         (v + w)*(8*sys%a*u*vw - (v - w)**2*(1 + sys%a*v2_w2) + &
-            u**2*(1 + sys%a*(v2_w2 + 4*v*w)))*sys%Znuc - &
-         2*u*(2 + u)*vw*(1 + sys%a*v2_w2)*sys%Znuc**2)/ &
-       (2*u*(2 + u)*vw*(1 + sys%a*v2_w2))
-    vDu=1/(2+u)
-    vDv=2*sys%a*v/(1+sys%a*v2_w2)-sys%Znuc
-    vDw=2*sys%a*w/(1+sys%a*v2_w2)-sys%Znuc
-    wlkr%vD(1:3)=vDv*r1/v+vDu*r12/u
-    wlkr%vD(4:6)=vDw*r2/w-vDu*r12/u
+    twouvw=2.0_dp*u*vw
+    Xa=1.0_dp + sys%a*v2_w2
+    u_2=u+2.0_dp
+    wlkr%PsiTsq=(u_2**2*Xa**2)/(4.0_dp*exp(2.0_dp*(v + w)*sys%Znuc))
+    wlkr%EL=(twouvw*(Xa + sys%a*(-12.0_dp - 8.0_dp*u)) + &
+         (v + w)*(4.0_dp*sys%a*twouvw - (v - w)**2*Xa + &
+            u2*(Xa + sys%a*4.0_dp*vw))*sys%Znuc)/(u_2*twouvw*Xa) - &
+         sys%Znuc**2
+    vDu=1.0_dp/(u_2*u)
+    vDv=2.0_dp*sys%a/Xa
+    vDw=vDv-sys%Znuc/w
+    vDv=vDv-sys%Znuc/v
+    wlkr%vD(1:3)=vDu*r12
+    wlkr%vD(4:6)=vDw*r2-wlkr%vD(1:3)
+    wlkr%vD(1:3)=vDv*r1+wlkr%vD(1:3)
     ! }}}
   end subroutine EL_drift_all_cusps
 
@@ -238,7 +242,7 @@ contains
     v=sqrt(v2)
     w=sqrt(w2)
     v2_w2=v2+w2
-    wlkr%PsiTsq=((2 + u)**2*(1 + sys%a*v2_w2)**2)/(4*exp(2*(v + w)*sys%Znuc))
+    wlkr%PsiTsq=((2.0_dp + u)**2*(1.0_dp + sys%a*v2_w2)**2)/(4.0_dp*exp(2.0_dp*(v + w)*sys%Znuc))
     ! }}}
   end subroutine PsiT2_all_cusps
 
