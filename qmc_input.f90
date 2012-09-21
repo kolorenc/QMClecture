@@ -16,6 +16,7 @@
 
 module qmc_input
   use types_const, only: dp
+  use cfparser
   implicit none
   private
 
@@ -61,10 +62,21 @@ module qmc_input
 
 contains
 
-  subroutine init_sys(sys,Znuc)
+  subroutine init_sys(sys,words)
     ! {{{ initialize the system and wave-function parameters
     type(t_sys), intent(inout) :: sys
-    real(dp), intent(in) :: Znuc
+    type(t_words), intent(in) :: words
+    type(t_words) :: syswords
+    real(dp) :: Znuc
+
+    if ( .not.readsection(words,syswords,"system") ) then
+       print *, "Missing variable 'system' section in the input file."
+       stop
+    end if
+
+    if ( .not.readvalue(syswords,Znuc,"Znuc") ) call missing("Znuc")
+    call clear(syswords)
+
     sys%Znuc=Znuc
     sys%Z1=Znuc-5.0_dp/16.0_dp
     sys%a=(2*(Znuc**2*(18105 -                &
@@ -89,6 +101,12 @@ contains
        (3.*(-98910 + Znuc*(-43776 +           &
               Znuc*(304160 + Znuc*(413413 + 4096*Znuc*(47 + 8*Znuc))))) &
          )
+  contains
+    subroutine missing(var)
+      character(len=*) var
+      print *, "Missing variable '", var, "'"
+      stop
+    end subroutine missing
     ! }}}
   end subroutine init_sys
 

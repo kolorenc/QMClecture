@@ -11,27 +11,39 @@ program qmc_run
   use omp_lib, only: omp_get_max_threads
 #endif
   use types_const, only: dp
+  use cfparser
   use qmc_input
   use qmc
   use reblocking
   implicit none
 
-  type(t_sys) :: sys
-  type(t_qmc_data) :: qmc_data
-  integer, parameter :: NW=2**11
-  integer, parameter :: Nsteps=2**16
-  integer :: Nthreads
-  !real(dp), parameter :: timestep=0.8_dp ! for pure Metropolis VMC
-  real(dp), parameter :: VMCtstep=0.1_dp
-  real(dp), parameter :: DMCtstep=0.01_dp
+  type t_run_param
+     integer :: NW=2**11
+     integer :: VMCsteps=2**16
+     integer :: VMCtherm=2**11
+     real(dp) :: VMCtstep=0.1_dp
+     integer :: DMCsteps=2**16
+     integer :: DMCtherm=2**11
+     real(dp) :: DMCtstep=0.01_dp
+     integer :: DMCruns=1
+  end type t_run_param
+
   integer, parameter :: extra_unit=22
 
-  integer :: i
+  type(t_sys) :: sys
+  type(t_qmc_data) :: qmc_data
+  type(t_run_param) :: run_param
+  type(t_words) :: words
+  real(dp) :: f
+  integer :: i, Nthreads
 
   ! watch out for the DMC acceptance ratio at larger Znuc - smaller timestep is
   ! needed in the high-density region (or smarter moves such as Umrigar,
-  ! Nightingale & Runge
-  call init_sys(sys,2.0_dp)
+  ! Nightingale & Runge)
+  call readConf(words,"qmc_run.cfg")
+  call init_run_param(run_param,words)
+  call init_sys(sys,words)
+  call clear(words)
 
 #ifdef _OPENMP
   ! the return value of omp_get_max_threads() is controlled by
@@ -41,47 +53,82 @@ program qmc_run
   Nthreads=1
 #endif
   print *, "number of threads:", Nthreads
-  call init_qmc_data(qmc_data,sys,NW,Nthreads)
+  call init_qmc_data(qmc_data,sys,run_param%NW,Nthreads)
 
   ! thermalization
-  call init_qmc(qmc_data,VMCtstep,2048)
+  call init_qmc(qmc_data,run_param%VMCtstep,run_param%VMCtherm)
   call vmc_run(qmc_data,sys)
 
-  ! actual data harvest
-  call init_qmc(qmc_data,VMCtstep,Nsteps)
+  ! data harvest
+  call init_qmc(qmc_data,run_param%VMCtstep,run_param%VMCsteps)
   call vmc_run(qmc_data,sys)
   call show_results(qmc_data,"Evmc_reblock.dat","E2vmc_reblock.dat", &
        "Evmc_trace.dat")
 
   ! thermalization
-  call init_qmc(qmc_data,DMCtstep,2048)
+  call init_qmc(qmc_data,run_param%DMCtstep,run_param%DMCtherm)
   call dmc_run(qmc_data,sys)
 
-  open(unit=extra_unit,file="tstep_ET_instant.dat")
+  ! data harvest
+  !call init_qmc(qmc_data,run_param%DMCtstep,run_param%DMCsteps)
+  !call dmc_run(qmc_data,sys)
+  !call show_results(qmc_data,"Edmc_reblock.dat","E2dmc_reblock.dat", &
+  !     "Edmc_trace.dat","NWdmc_trace.dat")
+
+  ! data harvest (optional time-step extrapolation)
+  open(unit=extra_unit,file="tstep_extrap.dat")
   write(unit=extra_unit,fmt=*) "# time step   energy   errorbar  acc"
-  do i=0, 0
-     ! actual data harvest
-     call init_qmc(qmc_data,DMCtstep*(10.0_dp-i)/10.0_dp, &
-          int(Nsteps*10.0_dp/(10-i)))
+  do i=0, run_param%DMCruns-1
+     f=(run_param%DMCruns-i)/real(run_param%DMCruns,dp)
+     call init_qmc(qmc_data,run_param%DMCtstep*f, &
+          int(run_param%DMCsteps/f))
      call dmc_run(qmc_data,sys)
      call show_results(qmc_data,"Edmc_reblock.dat","E2dmc_reblock.dat", &
           "Edmc_trace.dat","NWdmc_trace.dat",extra_unit)
   end do
   close(unit=extra_unit)
 
-  ! actual data harvest
-!!$  call init_qmc(qmc_data,DMCtstep/2,Nsteps*2)
-!!$  call dmc_run(qmc_data,sys)
-!!$  call process_results(qmc_data,"Edmc_trace.dat","Edmc_reblock.dat", &
-!!$       "E2dmc_reblock.dat")
-
-  ! actual data harvest
-!!$  call init_qmc(qmc_data,DMCtstep/4,Nsteps*4)
-!!$  call dmc_run(qmc_data,sys)
-!!$  call process_results(qmc_data,"Edmc_trace.dat","Edmc_reblock.dat", &
-!!$       "E2dmc_reblock.dat")
-
 contains
+
+  subroutine init_run_param(run_param,words)
+    ! {{{ take run parameters from the list of words
+    type(t_run_param), intent(out) :: run_param
+    type(t_words), intent(in) :: words
+
+    if ( .not.readvalue(words,run_param%NW,"NW") ) call missing("NW")
+
+    if ( .not.readvalue(words,run_param%VMCtherm,"VMCtherm") ) &
+         call missing("VMCtherm")
+    if ( .not.readvalue(words,run_param%VMCsteps,"VMCsteps") ) &
+         call missing("VMCsteps")
+    if ( .not.readvalue(words,run_param%VMCtstep,"VMCtstep") ) &
+         call missing("VMCtstep")
+
+    if ( .not.readvalue(words,run_param%DMCtherm,"DMCtherm") ) &
+         call missing("DMCtherm")
+    if ( .not.readvalue(words,run_param%DMCsteps,"DMCsteps") ) &
+         call missing("DMCsteps")
+    if ( .not.readvalue(words,run_param%DMCtstep,"DMCtstep") ) &
+         call missing("DMCtstep")
+    if ( .not.readvalue(words,run_param%DMCruns,"DMCruns") ) &
+         call missing("DMCruns")
+
+    run_param%NW=2**run_param%NW
+    run_param%VMCsteps=2**run_param%VMCsteps
+    run_param%VMCtherm=2**run_param%VMCtherm
+    run_param%DMCsteps=2**run_param%DMCsteps
+    run_param%DMCtherm=2**run_param%DMCtherm
+
+    ! }}}
+  end subroutine init_run_param
+
+  subroutine missing(var)
+    ! {{{ error message for init_run_params()
+    character(len=*) var
+    print *, "Missing variable '", var, "' in the input file."
+    stop
+    ! }}}
+  end subroutine missing
 
   subroutine show_results(qmc_data,file_Ereblock,file_E2reblock, &
        file_Etrace,file_NWtrace,extra_unit)
