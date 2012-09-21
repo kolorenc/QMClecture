@@ -1,0 +1,19 @@
+syntax: glob
+*.orig
+*.rej
+*~
+*.o
+*.a
+*.il
+*.mod
+*.dat
+*.eps
+*.pdf
+*.ps
+*.aux
+*.dvi
+*.log
+
+syntax: regexp
+.*\#.*\#$
+
