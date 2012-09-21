@@ -53,13 +53,19 @@ contains
     !     for each thread
     implicit none
     type(t_rnd_state), dimension(:), intent(out) :: rnd_state
-    integer(k4b) :: j, hgt, length
+    integer(k4b) :: j, hgt, length, x
     integer(k4b), dimension(:,:), allocatable :: ranseeds
 
     hgt=hg
     if (hg /= 2147483647) call error_msg('rnd_init: arith assump 1 fails')
     if (hgng >= 0)        call error_msg('rnd_init: arith assump 2 fails')
-    if (hgt+1 /= hgng)    call error_msg('rnd_init: arith assump 3 fails')
+    ! gfortran and sun/oracle need the extra 'x' variable, ifort works just
+    ! fine without it. I hope that the fail is due to some of the compilers
+    ! "optimizing the condition away" and that the random number generator
+    ! is not broken. It looks OK, all three compilers give the same sequence.
+    !if (hgt+1 /= hgng)    call error_msg('rnd_init: arith assump 3 fails')
+    x=hgt+1
+    if (x /= hgng)        call error_msg('rnd_init: arith assump 3 fails')
     if (not(hg) >= 0)     call error_msg('rnd_init: arith assump 4 fails')
     if (not(hgng) < 0)    call error_msg('rnd_init: arith assump 5 fails')
     if (hg+hgng >= 0)     call error_msg('rnd_init: arith assump 6 fails')
@@ -94,6 +100,14 @@ contains
     rnd_state%gaus_stored=.false.
 
     deallocate(ranseeds)
+
+    !open(11,file="rnd_test.dat")
+    !do j=1, 2**20
+    !   call ran1(rnd_state(1),y)
+    !   write(unit=11,fmt='(1e19.8)') y
+    !end do
+    !close(11)
+    !stop
     ! }}}
   end subroutine rnd_init
 
