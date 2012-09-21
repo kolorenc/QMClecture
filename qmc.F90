@@ -127,7 +127,7 @@ contains
           call ran1(rnd_state,x)
           qmc_data%walker(iw)%r(i)=x-0.5_dp
        end do
-       call EL_drift(sys,qmc_data%walker(i))
+       call EL_drift(sys,qmc_data%walker(iw))
     end do
     qmc_data%NW=NW
     qmc_data%ET=sum(qmc_data%walker%EL)/qmc_data%NWopt
