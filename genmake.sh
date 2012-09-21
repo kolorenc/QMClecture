@@ -177,33 +177,32 @@ fi
 tab=`printf "%b" "\t"`
 
 cat << EOF
-FC =ifort
-OPT=-O2 -pc80 -ip -openmp -openmp-report=2 #-reentrancy threaded
-# -stand f03 , -stand f95 , -stand f90 ...to check compliance with standards
-# note that -warn by default also makes those stupid files *__genmod.f90
-FFLAGS  =\$(OPT) -warn all -stand f03
-F77FLAGS=\$(OPT) -warn nousage  # no warnings about obsolete Fortran constructs
-LDFLAGS =-openmp #-reentrancy threaded
-LIBS=
+PLATFORM :=default
+include make/\$(PLATFORM).mk
 
 BIN      :=$bin
 OBJ      :=$obj
 ALLOBJ   :=$allobj
 MODFILES :=$modfiles
+LIBS     :=-Lcfparser -lcfparser \$(LIBS)
+INCLUDES :=-Icfparser
 
 all: bin
 
-bin: \$(BIN)
+bin: cfparser/libcfparser.a \$(BIN)
+
+cfparser/libcfparser.a:
+${tab}test ! -d cfparser || ( cd cfparser && make )
 
 `printf "%b" "$progs"`
 
 `printf "%b" "$deps"`
 
 %.o: %.F90
-$tab\$(FC) \$(FFLAGS) -c \$< -o \$@
+$tab\$(FC) \$(FFLAGS) \$(INCLUDES) -c \$< -o \$@
 
 %.o: %.f90
-$tab\$(FC) \$(FFLAGS) -c \$< -o \$@
+$tab\$(FC) \$(FFLAGS) \$(INCLUDES) -c \$< -o \$@
 
 %.o: %.F
 $tab\$(FC) \$(F77FLAGS) -c \$< -o \$@
@@ -213,8 +212,10 @@ $tab\$(FC) \$(F77FLAGS) -c \$< -o \$@
 
 clean:
 ${tab}rm -f \$(ALLOBJ)
+${tab}test ! -d cfparser || ( cd cfparser && make clean )
 
 mrproper: clean
 ${tab}rm -f \$(BIN) \$(MODFILES)
+${tab}test ! -d cfparser || ( cd cfparser && make mrproper )
 
 EOF
