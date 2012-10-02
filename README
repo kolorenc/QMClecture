@@ -1,0 +1,4 @@
+This tree requires the files from the library cfparser to be located in the
+directory 'cfparser'. It makes little sense to track the cfparser files in
+this repository. 
+
