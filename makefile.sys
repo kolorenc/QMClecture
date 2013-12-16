@@ -1,0 +1,47 @@
+PLATFORM := default
+include make/$(PLATFORM).mk
+SYS      := paraHe
+
+BIN      := $(SYS)_run
+OBJ      := $(SYS)_input.o reblocking.o rnd.o types_const.o qmc.o
+ALLOBJ   := $(OBJ) qmc_run.o
+MODFILES := types_const.mod qmc_input.mod rnd.mod qmc.mod reblocking.mod
+LIBS     :=-Lcfparser -lcfparser $(LIBS)
+INCLUDES :=-Icfparser
+
+all: bin
+
+bin: cfparser/libcfparser.a $(BIN)
+
+cfparser/libcfparser.a:
+	test ! -d cfparser || ( cd cfparser && make )
+
+$(SYS)_run: qmc_run.o $(OBJ)
+	@echo Linking $@
+	$(FC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(SYS)_input.o: types_const.o
+reblocking.o: types_const.o
+rnd.o: types_const.o
+qmc.o: $(SYS)_input.o rnd.o types_const.o
+qmc_run.o: qmc.o $(SYS)_input.o reblocking.o types_const.o
+
+%.o: %.F90
+	$(FC) $(FFLAGS) $(INCLUDES) -c $< -o $@
+
+%.o: %.f90
+	$(FC) $(FFLAGS) $(INCLUDES) -c $< -o $@
+
+%.o: %.F
+	$(FC) $(F77FLAGS) -c $< -o $@
+
+%.o: %.f
+	$(FC) $(F77FLAGS) -c $< -o $@
+
+clean:
+	rm -f $(ALLOBJ) $(MODFILES)
+	test ! -d cfparser || ( cd cfparser && make clean )
+
+mrproper: clean
+	rm -f $(BIN)
+	test ! -d cfparser || ( cd cfparser && make mrproper )

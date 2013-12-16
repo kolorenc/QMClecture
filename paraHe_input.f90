@@ -16,7 +16,6 @@
 
 module qmc_input
   use types_const, only: dp
-  use cfparser
   implicit none
   private
 
@@ -32,7 +31,7 @@ module qmc_input
   type t_walker
      real(dp), dimension(sys_dim) :: r  ! position
      real(dp), dimension(sys_dim) :: vD ! drift velocity
-     real(dp) :: EL                     ! local energy  
+     real(dp) :: EL                     ! local energy
      real(dp) :: psiTsq                 ! square of trial wavefunction
      real(dp) :: wt=1.0_dp              ! DMC weight
      integer :: sgn=1                   ! sign of trial wavefunction at r
@@ -40,6 +39,7 @@ module qmc_input
   end type t_walker
 
   type t_sys
+     character(10) :: id="parahelium"   ! identification of the system
      real(dp) :: Znuc=2.0_dp            ! nuclear charge
 
      ! parameter in the Hylleraas ansatz
@@ -53,10 +53,12 @@ module qmc_input
   end type t_sys
 
   interface EL_drift
+     !module procedure EL_drift_ee_cusp
      module procedure EL_drift_all_cusps
   end interface EL_drift
 
   interface psiT2
+     !module procedure psiT2_ee_cusp
      module procedure psiT2_all_cusps
   end interface psiT2
 
@@ -64,13 +66,14 @@ contains
 
   subroutine init_sys(sys,words)
     ! {{{ initialize the system and wave-function parameters
+    use cfparser, only: t_words, readsection, readvalue, clear
     type(t_sys), intent(inout) :: sys
     type(t_words), intent(in) :: words
     type(t_words) :: syswords
     real(dp) :: Znuc
 
     if ( .not.readsection(words,syswords,"system") ) then
-       print *, "Missing variable 'system' section in the input file."
+       print *, "Missing section 'system' in the input file."
        stop
     end if
 
@@ -98,9 +101,15 @@ contains
                           8*Znuc*             &
                           (2950393 + 512*Znuc*(1309 + 128*Znuc))) &
                           ))))))))))/         &
-       (3.*(-98910 + Znuc*(-43776 +           &
+       (3.0_dp*(-98910 + Znuc*(-43776 +           &
               Znuc*(304160 + Znuc*(413413 + 4096*Znuc*(47 + 8*Znuc))))) &
          )
+
+    write(unit=*,fmt='(1x,a)') "system:"
+    write(unit=*,fmt='(3x,a)') sys%id
+    write(unit=*,fmt='(3x,a,f8.4)') "nuclear charge [Znuc]:", sys%Znuc
+    write(unit=*,fmt=*)
+
   contains
     subroutine missing(var)
       character(len=*) var
@@ -116,7 +125,7 @@ contains
   ! the earliest reference I could find is [Kellner, Z. Phys. 44, 91 (1927)]
   ! ===========================================================================
 
-  subroutine EL_drift_no_cusp(sys,wlkr)
+  pure subroutine EL_drift_no_cusp(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
@@ -135,7 +144,7 @@ contains
     ! }}}
   end subroutine EL_drift_no_cusp
 
-  subroutine psiT2_no_cusp(sys,wlkr)
+  pure subroutine psiT2_no_cusp(sys,wlkr)
     ! {{{ trial wave-function squared
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
@@ -156,7 +165,7 @@ contains
   ! 5593 (1982)] but this functional form is surely older
   ! ===========================================================================
 
-  subroutine EL_drift_ee_cusp(sys,wlkr)
+  pure subroutine EL_drift_ee_cusp(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared, implemented
     !     electron-electron cusp
     type(t_sys), intent(in) :: sys
@@ -183,7 +192,7 @@ contains
     ! }}}
   end subroutine EL_drift_ee_cusp
 
-  subroutine psiT2_ee_cusp(sys,wlkr)
+  pure subroutine psiT2_ee_cusp(sys,wlkr)
     ! {{{ trial wave-function squared
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
@@ -209,7 +218,7 @@ contains
   ! (English translation is in the Hettema's book)
   ! ===========================================================================
 
-  subroutine EL_drift_all_cusps(sys,wlkr)
+  pure subroutine EL_drift_all_cusps(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
@@ -244,7 +253,7 @@ contains
     ! }}}
   end subroutine EL_drift_all_cusps
 
-  subroutine psiT2_all_cusps(sys,wlkr)
+  pure subroutine psiT2_all_cusps(sys,wlkr)
     ! {{{ trial wave-function squared
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
