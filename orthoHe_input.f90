@@ -77,6 +77,7 @@ contains
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l, r12l, psiA, psiB, psi, s12, s21
     real(dp), dimension(3) :: r1, r2, r10, r20
+    real(dp) :: Z2half
     r1=wlkr%r(1:3)
     r2=wlkr%r(4:6)
     r1l=sqrt(sum(r1**2))
@@ -84,20 +85,19 @@ contains
     r12l=sqrt(sum((r1-r2)**2))
     r10=r1/r1l
     r20=r2/r2l
-    s12=exp(-sys%Z1*r1l-sys%Z2*r2l/2.0_dp)
-    s21=exp(-sys%Z1*r2l-sys%Z2*r1l/2.0_dp)
-    psiA=(1.0_dp-sys%Z2*r2l/2.0_dp)*s12
-    psiB=(1.0_dp-sys%Z2*r1l/2.0_dp)*s21
+    Z2half=sys%Z2/2.0_dp
+    s12=exp(-sys%Z1*r1l-Z2half*r2l)
+    s21=exp(-sys%Z1*r2l-Z2half*r1l)
+    psiA=(1.0_dp-Z2half*r2l)*s12
+    psiB=(1.0_dp-Z2half*r1l)*s21
     psi=psiA-psiB
     wlkr%sgn=int(sign(1.0_dp,psi))
-    wlkr%EL=-(sys%Z1**2+sys%Z2**2/4.0_dp)/2.0_dp+1.0_dp/r12l &
-         & +( ( (sys%Z1-sys%Znuc)/r1l+(sys%Z2-sys%Znuc)/r2l )*psiA &
-         &   -( (sys%Z1-sys%Znuc)/r2l+(sys%Z2-sys%Znuc)/r1l )*psiB )/psi
+    wlkr%EL=-(sys%Z1**2+Z2half**2)/2.0_dp+1.0_dp/r12l &
+         +( ( (sys%Z1-sys%Znuc)/r1l+(sys%Z2-sys%Znuc)/r2l )*psiA &
+         -( (sys%Z1-sys%Znuc)/r2l+(sys%Z2-sys%Znuc)/r1l )*psiB )/psi
     wlkr%psiTsq=psi**2
-    wlkr%vD(1:3)=( -sys%Z1*(1.0_dp-sys%Z2*r2l/2.0_dp)*s12 &
-         & +sys%Z2/2.0_dp*(1.0_dp-sys%Z2*r1l/2.0_dp)*s21+sys%Z2/2.0_dp*s21 )*r10
-    wlkr%vD(4:6)=(  sys%Z1*(1.0_dp-sys%Z2*r1l/2.0_dp)*s21 &
-         & -sys%Z2/2.0_dp*(1.0_dp-sys%Z2*r2l/2.0_dp)*s12-sys%Z2/2.0_dp*s12 )*r20
+    wlkr%vD(1:3)=( -sys%Z1*psiA + Z2half*psiB + Z2half*s21 )*r10
+    wlkr%vD(4:6)=(  sys%Z1*psiB - Z2half*psiA - Z2half*s12 )*r20
     wlkr%vD=wlkr%vD/psi
     ! }}}
   end subroutine EL_drift
