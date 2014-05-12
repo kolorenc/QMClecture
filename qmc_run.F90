@@ -139,7 +139,7 @@ contains
     character(len=*), intent(in) :: file_Ereblock, file_E2reblock
     character(len=*), optional, intent(in) :: file_Etrace, file_NWtrace
     integer, optional, intent(in) :: extra_unit
-    real(dp) :: En, errEn, En2, errEn2, Var, errVar, corrlen, ageAV
+    real(dp) :: En, errEn, En2, errEn2, Var, errVar, corrlen, corrlenEn, ageAV
     integer :: i, ageM, finalNblock, NW
 
     NW=qmc_data%NW
@@ -174,10 +174,10 @@ contains
     print *, "average age:", ageAV
 
     En=sum(qmc_data%Etot)/qmc_data%Nsteps
-    errEn=errorbar(qmc_data%Etot,En,file_Ereblock,corrlen,finalNBlock)
+    errEn=errorbar(qmc_data%Etot,En,file_Ereblock,corrlenEn,finalNBlock)
     print *, "---"
     print *, "total energy:", En, "+/-", errEn
-    print *, "correlation length for E (steps):", corrlen
+    print *, "correlation length for E (steps):", corrlenEn
     print *, "final number of blocks in the statistics:", finalNblock
 
     En2=sum(qmc_data%Etot2)/qmc_data%Nsteps
