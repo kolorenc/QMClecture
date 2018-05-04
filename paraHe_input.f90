@@ -1,7 +1,7 @@
-! problem specific subroutines for He atom (parahelium=opposite spins), good
-! also for any helium-like ion, for instance H^-
+! problem specific subroutines for He atom (parahelium=opposite spins), it is
+! good also for any helium-like ion, for instance H^-
 
-! some of the VMC energies we know from other sources
+! some of the variational energies we know from other sources
 !  "no cusp", Z1=2            -2.75
 !  "no cusp", Z1=2-5/16       -2.84766
 !  "all cusps", a=0.0878628   -2.89537
@@ -15,7 +15,7 @@
 ! 877 (2006)]
 
 module qmc_input
-  use types_const, only: dp
+  use types_const, only: dp, missing
   implicit none
   private
 
@@ -45,7 +45,7 @@ module qmc_input
      ! parameter in the Hylleraas ansatz
      ! a=4*(-123371.0_dp+sqrt(32098719641.0_dp))/2539875.0_dp for Znuc=2
      ! a=2*(-685.0_dp+3*sqrt(153862015.0_dp))/800167.0_dp for Znuc=1
-     real(dp) :: a=0.08786283656089399052453400224163986218292_dp
+     real(dp) :: a=0.08786283656089399052453400224163986218292_dp !Znuc=2
 
      ! parameters in the Slater-Jastrow ansatz
      real(dp) :: Z1=27.0_dp/16.0_dp     ! effective charge in the s wave
@@ -109,13 +109,6 @@ contains
     write(unit=*,fmt='(3x,a)') sys%id
     write(unit=*,fmt='(3x,a,f8.4)') "nuclear charge [Znuc]:", sys%Znuc
     write(unit=*,fmt=*)
-
-  contains
-    subroutine missing(var)
-      character(len=*) var
-      print *, "Missing variable '", var, "'"
-      stop
-    end subroutine missing
     ! }}}
   end subroutine init_sys
 

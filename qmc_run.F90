@@ -10,7 +10,7 @@ program qmc_run
 #ifdef _OPENMP
   use omp_lib, only: omp_get_max_threads
 #endif
-  use types_const, only: dp
+  use types_const, only: dp, missing
   use cfparser
   use qmc_input
   use qmc
@@ -37,9 +37,9 @@ program qmc_run
   real(dp) :: f
   integer :: i, Nthreads
 
-  ! watch out for the DMC acceptance ratio at larger Znuc - smaller timestep is
-  ! needed in the high-density region (or smarter moves such as Umrigar,
-  ! Nightingale & Runge)
+  ! watch out for the DMC acceptance ratio at larger Znuc - a smaller timestep
+  ! is needed in the high-density region, or smarter moves such as [Umrigar,
+  ! Nightingale & Runge, J. Chem. Phys. 99, 2865 (1993)]
   call readConf(words,"qmc_run.cfg")
   call init_run_param(run_param,words)
   call init_sys(sys,words)
@@ -75,7 +75,7 @@ program qmc_run
   !call show_results(qmc_data,"Edmc_reblock.dat","E2dmc_reblock.dat", &
   !     "Edmc_trace.dat","NWdmc_trace.dat")
 
-  ! data harvest (optional time-step extrapolation)
+  ! data harvest (with optional time-step extrapolation)
   open(unit=extra_unit,file="tstep_extrap.dat")
   write(unit=extra_unit,fmt=*) "# time step   energy   errorbar  acc"
   do i=0, run_param%DMCruns-1
@@ -94,24 +94,26 @@ contains
     ! {{{ take run parameters from the list of words
     type(t_run_param), intent(out) :: run_param
     type(t_words), intent(in) :: words
+    character(len=8) :: var
 
-    if ( .not.readvalue(words,run_param%NW,"NW") ) call missing("NW")
+    var="NW"
+    if ( .not.readvalue(words,run_param%NW,var) ) call missing(var)
 
-    if ( .not.readvalue(words,run_param%VMCtherm,"VMCtherm") ) &
-         call missing("VMCtherm")
-    if ( .not.readvalue(words,run_param%VMCsteps,"VMCsteps") ) &
-         call missing("VMCsteps")
-    if ( .not.readvalue(words,run_param%VMCtstep,"VMCtstep") ) &
-         call missing("VMCtstep")
+    var="VMCtherm"
+    if ( .not.readvalue(words,run_param%VMCtherm,var) ) call missing(var)
+    var="VMCsteps"
+    if ( .not.readvalue(words,run_param%VMCsteps,var) ) call missing(var)
+    var="VMCtstep"
+    if ( .not.readvalue(words,run_param%VMCtstep,var) ) call missing(var)
 
-    if ( .not.readvalue(words,run_param%DMCtherm,"DMCtherm") ) &
-         call missing("DMCtherm")
-    if ( .not.readvalue(words,run_param%DMCsteps,"DMCsteps") ) &
-         call missing("DMCsteps")
-    if ( .not.readvalue(words,run_param%DMCtstep,"DMCtstep") ) &
-         call missing("DMCtstep")
-    if ( .not.readvalue(words,run_param%DMCruns,"DMCruns") ) &
-         call missing("DMCruns")
+    var="DMCtherm"
+    if ( .not.readvalue(words,run_param%DMCtherm,var) ) call missing(var)
+    var="DMCsteps"
+    if ( .not.readvalue(words,run_param%DMCsteps,var) ) call missing(var)
+    var="DMCtstep"
+    if ( .not.readvalue(words,run_param%DMCtstep,var) ) call missing(var)
+    var="DMCruns"
+    if ( .not.readvalue(words,run_param%DMCruns,var) ) call missing(var)
 
     run_param%NW=2**run_param%NW
     run_param%VMCsteps=2**run_param%VMCsteps
@@ -122,19 +124,11 @@ contains
     ! }}}
   end subroutine init_run_param
 
-  subroutine missing(var)
-    ! {{{ error message for init_run_params()
-    character(len=*) var
-    print *, "Missing variable '", var, "' in the input file."
-    stop
-    ! }}}
-  end subroutine missing
-
   subroutine show_results(qmc_data,file_Ereblock,file_E2reblock, &
        file_Etrace,file_NWtrace,extra_unit)
-    ! {{{ calculate and write measured quantities, their errorbars and
-    !     statistics of the MC process
-    !     argument qmc_data is inout due to the implementation of errorbar()
+    ! {{{ calculate and write the measured quantities, their errorbars and
+    !     statistics of the Monte Carlo process;
+    !     argument qmc_data is 'inout' due to the implementation of errorbar()
     type(t_qmc_data), intent(inout) :: qmc_data
     character(len=*), intent(in) :: file_Ereblock, file_E2reblock
     character(len=*), optional, intent(in) :: file_Etrace, file_NWtrace

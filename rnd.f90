@@ -26,7 +26,7 @@
 ! ============================================================================
 
 module rnd
-  use types_const
+  use types_const, only: dp, i4b
   implicit none
   private
 

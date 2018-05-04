@@ -1,7 +1,7 @@
 ! problem specific subroutines for H2 molecule
 
 module qmc_input
-  use types_const, only: dp
+  use types_const, only: dp, missing
   implicit none
   private
 
@@ -58,21 +58,8 @@ contains
     write(unit=*,fmt='(3x,a)') sys%id
     write(unit=*,fmt='(3x,a,f8.4)') "proton-proton distance [R]:", sys%R
     write(unit=*,fmt=*)
-
-  contains
-    subroutine missing(var)
-      character(len=*) var
-      print *, "Missing variable '", var, "'"
-      stop
-    end subroutine missing
     ! }}}
   end subroutine init_sys
-
-  ! ===========================================================================
-  ! simple trial wave function, just a product of two s orbitals with effective
-  ! charge; all cusps are broken when the effective charge deviates from 2;
-  ! the earliest reference I could find is [Kellner, Z. Phys. 44, 91 (1927)]
-  ! ===========================================================================
 
   pure subroutine EL_drift_HeitlerLondon(sys,wlkr)
     ! {{{ local energy, drift velocity, wave-function squared

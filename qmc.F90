@@ -1,5 +1,5 @@
 ! You need to supply 2 subroutines:
-! EL_drift(sys,wlkr) and psiT2(sys,wlkr) in module dmc_input
+! EL_drift(sys,wlkr) and psiT2(sys,wlkr) in module 'qmc_input'
 
 ! The derived type t_qmc_data contains allocatable arrays which is not
 ! possible in standard Fortran95. It is defined as TR15581 extension to F95

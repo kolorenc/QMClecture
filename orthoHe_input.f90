@@ -1,6 +1,6 @@
 ! problem specific subroutines for He atom (orthohelium=parallel spins)
 module qmc_input
-  use types_const, only: dp
+  use types_const, only: dp, missing
   implicit none
   private
 
@@ -24,16 +24,16 @@ module qmc_input
   type t_sys
      character(11) :: id="orthohelium"  ! identification of the system
      real(dp) :: Znuc=2.0_dp            ! nuclear charge
-     ! seems from VMC
+     ! effective charges optimized in VMC
      !real(dp) :: Z1=1.98_dp            ! effective charge for 1s wave
      !real(dp) :: Z2=1.55_dp            ! effective charge for 2s wave
-     ! from analytics in Maple, corresponding energy is -2.166639875
+     ! from analytics in Mathematica, corresponding energy is -2.166639875
      !real(dp) :: Z1=1.99364_dp
      !real(dp) :: Z2=1.55094_dp
-     ! well, our trial wavefunction has the same nodes for all charges; it is
-     ! actually better to take unscreened charges, because in that case there
+     ! our trial wave function has the same nodes for all charges; it is thus
+     ! actually better to take unscreened charges because in that case there
      ! are no 1/r divergences in EL due to core (remains only that due to e-e
-     ! interaction
+     ! interaction)
      real(dp) :: Z1=2.0_dp
      real(dp) :: Z2=2.0_dp
   end type t_sys
@@ -61,13 +61,6 @@ contains
     write(unit=*,fmt='(3x,a)') sys%id
     write(unit=*,fmt='(3x,a,f8.4)') "nuclear charge [Znuc]:", sys%Znuc
     write(unit=*,fmt=*)
-
-  contains
-    subroutine missing(var)
-      character(len=*) var
-      print *, "Missing variable '", var, "'"
-      stop
-    end subroutine missing
     ! }}}
   end subroutine init_sys
 
