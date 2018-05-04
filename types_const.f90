@@ -1,3 +1,14 @@
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: global constants and utility subroutines
+!
+! Copyright (C) 2012 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
+
 module types_const
   implicit none
 

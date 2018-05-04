@@ -1,4 +1,13 @@
-! problem specific subroutines for H2 molecule
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: system-specific subroutines for H2 molecule
+!
+! Copyright (C) 2014 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
 
 module qmc_input
   use types_const, only: dp, missing

@@ -1,3 +1,14 @@
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: top-level driver, compiles to the executable
+!
+! Copyright (C) 2012 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
+
 ! Histogram in gnuplot:
 ! bin(x,width)=width*floor(x/width) + width/2.0
 ! plot 'Evmc_trace.dat' using (bin($1,.001)):(1.0) smooth freq with boxes

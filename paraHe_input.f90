@@ -1,5 +1,14 @@
-! problem specific subroutines for He atom (parahelium=opposite spins), it is
-! good also for any helium-like ion, for instance H^-
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: system-specific subroutines for He atom (parahelium=opposite
+! spins), it is good also for any helium-like ion, for instance H^-
+!
+! Copyright (C) 2012 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
 
 ! some of the variational energies we know from other sources
 !  "no cusp", Z1=2            -2.75

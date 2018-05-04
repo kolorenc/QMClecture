@@ -1,4 +1,14 @@
-! ============================================================================
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: random-number generator
+!
+! Copyright (C) 2012 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
+!
 ! Adaptation of some stuff from Numerical Recipes in Fortran 90, chapter B7,
 ! to be at least somewhat OpenMP friendly. Original intentions were quite
 ! different from the end result. I wanted a module-global array of state
@@ -23,6 +33,7 @@
 !   http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
 !   http://theo.phys.sci.hiroshima-u.ac.jp/~ishikawa/PRNG/mt_stream_en.html
 !   http://www.cs.hmc.edu/~geoff/mtwist.html
+!
 ! ============================================================================
 
 module rnd

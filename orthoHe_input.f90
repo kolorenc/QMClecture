@@ -1,4 +1,15 @@
-! problem specific subroutines for He atom (orthohelium=parallel spins)
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: system-specific subroutines for He atom (orthohelium=parallel
+! spins)
+!
+! Copyright (C) 2013 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
+
 module qmc_input
   use types_const, only: dp, missing
   implicit none

@@ -1,3 +1,14 @@
+! ==========================================================================
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: implementation of the Monte Carlo methods.
+!
+! Copyright (C) 2012 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
+
 ! You need to supply 2 subroutines:
 ! EL_drift(sys,wlkr) and psiT2(sys,wlkr) in module 'qmc_input'
 
