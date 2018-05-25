@@ -164,26 +164,28 @@ pdfkeywords={quantum Monte Carlo, diffusion Monte Carlo, Hylleraas
 \noindent
 \hskip\shang{\Large\bfseries Basic VMC/DMC code for educational purposes}
 \vskip.5em\noindent
-\hskip\shang{\itshape Jind\v rich Koloren\v c, May 2018}
+\hskip\shang{\itshape
+  \href{https://orcid.org/0000-0003-2627-8302}{Jind\v rich
+Koloren\v c}, May 2018}
 \vskip1em
 
 \hrule
 \tableofcontents
 \vskip\baselineskip\hrule
 
-\vskip.5em
+\vskip0em
 \noindent
 
 \section{Configuration file}
 
 There is a separate executable for each of the physical systems to be
 simulated,
-\code{paraHe_run}, \code{othoHe_run}, \code{H2_run} (see below for
-details). Each of these
+\code{paraHe_run}, \code{othoHe_run}, \code{H2_run}
+(sec.~\ref{sec:systems}). Each of these
 programs performs a VMC simulation followed by a DMC simulation. It
 is controlled by a configuration file
 \code{qmc_run.cfg}. It contains name--value pairs (the order of these
-pairs does not matter). The number of wakers and the number of Monte Carlo
+pairs does not matter). The number of walkers and the number of Monte Carlo
 steps are specified as powers of two. The number of walkers is given
 as
 \beginconfig
@@ -207,8 +209,8 @@ which defines the number of thermalization/equilibration steps as
 $2^\text{\code{VMCtherm}}$ and the number of step when the energy is
 measured as $2^\text{\code{VMCsteps}}$. The ``time step''
 \code{VMCtstep} has a different meaning for the simple Metropolis
-moves and for the diffusion-drift moves. The Metropolis moves are
-performed as
+moves \cite{metropolis1953} and for the diffusion-drift moves. The
+Metropolis moves are performed as
 \begin{equation}
 \mathcal R=\mathcal R'+\xi(\text{\code{VMCtstep}}-0.5)
 \end{equation}
@@ -240,45 +242,47 @@ sequential DMC simulations with decreasing time steps
 The data for the extrapolation are written to \code{tstep_extrap.dat}.
 
 \subsection{System-specific data}
-Finally, the parametes of the simulated physical system need to be
+Finally, the parameters of the simulated physical system need to be
 specified inside the \code{system\{ \}} group. Details are described
 in the next section.
  
 
 \section{Available systems}
+\label{sec:systems}
 
 One can play with three predefined two-electron systems\dots\ or one
-can define his/her own by implementing the appropriate
+can define his/her own system by implementing an appropriate
 \code{qmc_input} module, sec.~\ref{sec:qmc_input}. 
 
 \subsection{\code{paraHe_run}: helium atom (spin singlet)}
 
 The singlet state of helium atom (or helium-like two-electron
 ions) is simulated with the trial wave function having a
-Hylleraas(-like) form
+Hylleraas form \cite{hylleraas1929} (English translation in
+\cite{hetema_book})
 \begin{equation}
+\label{eq:hylleraas}
 \Psi_\text{T}(\mathbf r_1,\mathbf r_2)
  =\biggl(1+\frac12\, r_{12}\biggr)\Bigl[1+a\bigl(r_1^2+r_2^2\bigr)\Bigr]
-   \,\rme^{-Z(r_1+r_2)}
+   \,\rme^{-Z(r_1+r_2)}\,.
 \end{equation}
-with a single variational parameter $a$. It fullfils the electron-ion
-and electron-electron cusp conditions for any $a$.
-
-The \code{system\{ \}} group in the configuration file
-\code{qmc_run.cfg} has the following content
+It has a single variational parameter $a$ and fulfills the electron-ion
+and electron-electron cusp conditions for any $a$. The \code{system\{
+  \}} group in the configuration file \code{qmc_run.cfg} reads as
 \beginconfig
 \begin{verbatim}
 system { Znuc 2.0  a 0.0 }
 \end{verbatim}
 \endconfig
-This example specifies that the nuclear charge is
+This example says that the nuclear charge is
 $Z=\text{\code{Znuc}}=2.0$ (mandatory parameter)
-and the variational parameter in the Hyleraas ansatz is
+and the variational parameter in the Hylleraas ansatz is
 $a=\text{\code{a}}=0.0$. If the parameter $a$ is not given, the code
 takes the optimal value that minimizes the total energy.
 
-The total energy corresponding to this $\Psi_\text{T}$ can be
-evaluated analytically. It can be written as
+The total energy $E$ corresponding to $\Psi_\text{T}$ from
+eq.~\eqref{eq:hylleraas} can be evaluated analytically
+\cite{hylleraas1929,schwartz2006}. One arrives at
 \begin{equation}
 E=\frac{Z}{4}\,\frac{A}{B}
 \end{equation}
@@ -290,7 +294,7 @@ A&=
  &\qquad -8 Z^4\Bigl\{4 Z \bigl[Z (16 Z+25)+4\bigr]-35\Bigr\}\,,\\
 B&= 9 a^2 \bigl[Z (896 Z+3355)+3680\bigr]\nonumber\\
  &\qquad +24 a Z^2\bigl[Z (64 Z+189)+168\bigr]
-  +8Z^4 \bigl[Z (16 Z+35)+24\bigr]
+  +8Z^4 \bigl[Z (16 Z+35)+24\bigr]\,.
 \end{align}
 The derivative of the total energy with respect to $a$ is $\partial
 E/\partial a=8 Z^3 C/B^2$ where
@@ -300,7 +304,7 @@ C&=9 a^2 \Biggl\{Z \biggl[Z \Bigl[Z \bigl[4096 Z (8 Z+47)+413413\bigr]+304160\Bi
 &\quad -8 Z^4 \biggl\{Z \Bigl[Z \bigl[Z (16 Z+737)+2856\bigr]+3168\Bigr]+1008\biggr\}\,.
 \end{align}
 To find the optimal $a$ that minimizes the total energy we need to
-solve the equation $\partial E/\partial a=0$, which is straightforward
+solve $\partial E/\partial a=0$ for $a$, which is straightforward
 since is is just a quadratic equation (only the final formula is too
 long to be explicitly written here).
 % \begin{equation}
@@ -316,8 +320,8 @@ long to be explicitly written here).
 \subsection{\code{orthoHe_run}: helium atom (spin triplet)}
 
 The triplet state of the helium atom (or a helium-like two-electron
-ion) has an antisymmetric wave function and one can thus investigate
-the behavior of the fixed-node constraint. The wave function is
+ion) has an antisymmetric wave function and one can use it to illustrate
+the fixed-node constraint. The wave function is
 approximated by a Slater determinant constructed from 1s and 2s
 orbitals,
 \begin{equation}
@@ -329,11 +333,12 @@ where
 \begin{equation}
 \psi_\text{1s}(r)=\rme^{-Z_1r}
 \quad\text{and}\quad
-\psi_\text{2s}(r)=\biggl(1-\frac{Z_2 r}{2}\biggr)\rme^{-Z_2 r/2}\,.
+\psi_\text{2s}(r)=\biggl(1-\frac{Z_2 r}{2}\biggr)\,\rme^{-Z_2 r/2}\,.
 \end{equation}
 The system is so simple that the nodal hypersurface is entirely
 determined by symmetry and it is specified by a condition
-$r_1=r_2$. Note that the complete nodal surface is much larger than
+$r_1=r_2$ \cite{klein1976,bressanini2005}. Note that the complete nodal surface
+is much larger than
 the obvious node defined by electron coincidence $\mathbf r_1=\mathbf
 r_2$! Our trial function has the exact nodes even though it is
 certainly not the exact ground state.
@@ -352,18 +357,18 @@ system {
 Only the nuclear charge \code{Znuc} is mandatory, the charges in the
 wave function are optional. If they are not given,
 \code{Z1}${}={}$\code{Z2}${}={}$\code{Znuc} is used. For VMC one can
-treat \code{Z1} and \code{Z2} as variational parameters (the optimal
+treat $Z_1$ and $Z_2$ as variational parameters (the optimal
 values are shown in the example above) but for DMC it is better to
-satisfy the electron-nucleus cusp conditions by keeping \code{Z1} and
-\code{Z2} equal to the charge of the nucleus. For satisfying also the
+satisfy the electron-nucleus cusp conditions by keeping $Z_1$ and
+$Z_2$ equal to the charge of the nucleus. For satisfying also the
 electron-electron cusp conditions we would need to include a
 correlation factor.
 
 
-\subsection{\code{H2_run}: hydrogen molecule}
+\subsection{\code{H2_run}: hydrogen molecule (spin singlet)}
 
 The hydrogen molecule is simulated with the Heitler--London trial wave
-function
+function \cite{heitler1927} (English translation in \cite{hetema_book})
 \begin{equation}
 \Psi_\text{T}(\mathbf r_1,\mathbf r_2)=
  \rme^{-|\mathbf r_1-\mathbf r_A|-|\mathbf r_2-\mathbf r_B|}
@@ -387,19 +392,14 @@ different values $R$.
 
 \section{Output}
 
-Apart from the information written to STDOUT, the program writes
+Apart from the results written to STDOUT, the program writes
 several files to the disk.
 
-\subsection{\code{Evmc_trace.dat}}
+\subsection{\code{Evmc_trace.dat}, \code{Edmc_trace.dat}}
 
 The average of the total energy across the walker population at each
-step of the VMC simulation (the thermalization period is not saved).
-
-\subsection{\code{Edmc_trace.dat}}
-
-The average of the total energy across the walker population at each
-step of the DMC simulation (the initial projection period is not
-saved).
+step of the VMC or DMC simulation. The thermalization period (VMC) and
+the initial-projection period (DMC) is not saved.
 
 \subsection{\code{NWdmc_trace.dat}}
 
@@ -430,13 +430,13 @@ which measures the quality of the trial wave function.
 
 \subsection{\code{tstep_extrap.dat}}
 
-DMC energy as a function of the sime step (if \code{DMCruns}${}>1$).
+DMC energy as a function of the time step (if \code{DMCruns}${}>1$).
 
 
 
 \section{Source code}
 
-The source code (Fortran) is split to several files. There is a fair
+The source code (Fortran 95 + TR15581) is split to several files. There is a fair
 amount of comments in the code so it should be possible to figure out
 how the program works.
 
@@ -447,16 +447,17 @@ given physical system.
 
 \subsection{\code{qmc.F90}}
 
-Implementation of the VMC and DMC methods. The subroutines
+Implementation of the VMC and DMC methods following
+\cite{reynolds1982}. The subroutines
 \code{vmc_run()} and \code{dmc_run()} are multithreaded.
 
 \subsection{\code{reblocking.f90}}
 
-Implementation of the blocking method.
+Implementation of the blocking method \cite{flyvbjerg1989}.
 
 \subsection{\code{rnd.f90}}
 
-Pseudorandom number generator.
+Pseudorandom number generator \cite{NRf90}.
 
 \subsection{\code{paraHe_input.f90}, \code{orthoHe_input.f90},
   \code{H2_input.f90}}
@@ -472,8 +473,7 @@ files implements an instance of \code{qmc_input} module.
 
 Constants and utility routines.
 
-
-
-\bibliography{dft,dmft,lanczos,aim}
+\addcontentsline{toc}{section}{References}
+\bibliography{qmc_review,nodes,early_qm,numerics}
 
 \end{document}
