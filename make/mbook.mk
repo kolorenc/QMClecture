@@ -2,7 +2,7 @@
 # Compiler definitions for MacBook
 ##############################################################################
 
-FC       = gfortran-mp-4.6
+FC       = gfortran-mp-6
 FFLDCOMM = -fopenmp
 OPT      = -O2 -Wall $(FFLDCOMM)
 # standards check/enforcement -std=f95 or -std=f2003, -fall-intrinsics
