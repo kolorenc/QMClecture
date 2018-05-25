@@ -40,6 +40,18 @@ contains
     ! }}}
   end subroutine missing
 
+  subroutine finish_line(test,text)
+    ! {{{ finish the line after a non-advancing write
+    logical, intent(in) :: test
+    character(len=*), intent(in) :: text
+    if ( test ) then
+       print *
+    else
+       print *, " ", text
+    end if
+    ! }}}
+  end subroutine finish_line
+
 end module types_const
 
 ! Local variables:

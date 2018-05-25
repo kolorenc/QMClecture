@@ -88,7 +88,7 @@ program qmc_run
 
   ! data harvest (with optional time-step extrapolation)
   open(unit=extra_unit,file="tstep_extrap.dat")
-  write(unit=extra_unit,fmt=*) "# time step   energy   errorbar  acc"
+  write(unit=extra_unit,fmt=*) "# time step   energy   errorbar   acceptance"
   do i=0, run_param%DMCruns-1
      f=(run_param%DMCruns-i)/real(run_param%DMCruns,dp)
      call init_qmc(qmc_data,run_param%DMCtstep*f, &

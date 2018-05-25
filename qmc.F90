@@ -31,14 +31,16 @@ module qmc
   public :: vmc_run, dmc_run
 
   ! room for branched walkers in the allocated array (DMC)
+  ! factor 2 should be enough but if there are divergencies in the local
+  ! energy the population may explode
   real(dp), parameter :: q=2.0_dp    ! NWmax/NWopt
 
   ! diffusion-drift moves: the drift velocity diverges at nodes which leads to
   ! walkers being trapped near the nodes (the proposed move is so large that
   ! it is always rejected). The problem is more visible in VMC where the time
   ! step is larger. In the same time, the VMC can be easily cured by imposing
-  ! a maximum on the magnitude of the drift velocity, see move_diffusion_drift()
-  ! and accept_ratio_diffusion_drift()
+  ! a maximum on the magnitude of the drift velocity, see
+  ! move_diffusion_drift() and accept_ratio_diffusion_drift()
   real(dp), parameter :: vDmax=5.0_dp
 
   ! in DMC we cannot fool with the drift velocity but we can slighly bias the
@@ -279,9 +281,9 @@ contains
 #ifndef VMC_DIFFUSION_DRIFT
 
     ! Metropolis step [MRRT&T, J. Chem. Phys. 21, 1087 (1953)];
-    ! not the mot efficient sampling with respect to the number of steps but
-    ! each of the step is fast;
-    ! the first quantum Monte Carlo of this type was
+    ! not the most efficient sampling with respect to the number of steps but
+    ! each of the steps is fast;
+    ! the first quantum Monte Carlo of this type (VMC) was
     ! [McMillan, Phys. Rev. 138, A442 (1965)]
 
     call move_metropolis(vmc_data,rnd_state,vmc_data%walker(iwlkr),wlkr)
@@ -295,7 +297,7 @@ contains
     ! J. Chem. Phys. 69, 4628 (1978)] but similar "smart" sampling is
     ! described also in [Ceperley, Chester & Kalos, Phys. Rev. B 16,
     ! 3081 (1977)]
-    ! REMEMBER: the proposal probablity is asymetric and hence the ratio
+    ! REMEMBER: the proposal probablity is asymmetric and hence the ratio
     ! for accept-reject is more complicated than in the pure Metropolis
     ! [Hastings, Biometrika 57, 97 (1970)]
 
@@ -424,10 +426,16 @@ contains
          vDlimit=.false.)
     call EL_drift(sys,wlkr)
 
-    ! detailed balance and fixed-node constraint
+    ! fixed-node constraint: if the node is crossed we reject the move (the
+    ! walker stays at the original position), the weight is calculated only
+    ! if the move is accepted
     acc=.false.
     if ( dmc_data%walker(iwlkr)%sgn == wlkr%sgn ) then
-       ! additional detailed balance
+       ! additional detailed balance to reduce time-step error in the
+       ! diffusion-drift Green's function [Reynolds, Ceperley, Alder, Lester,
+       ! J. Chem. Phys. 77, 5593 (1982)], the explanation given in [Umrigar,
+       ! Nightingale & Runge, J. Chem. Phys. 99, 2865 (1993)] is perhaps
+       ! easier to understand
        r = accept_ratio_diffusion_drift(dmc_data,dmc_data%walker(iwlkr),wlkr, &
             vDlimit=.false.)
        ! if the walker is stuck for a long time, encourage it to move; this
@@ -555,7 +563,7 @@ contains
                 NW=NW-1
              end if
              if ( NW < 1 ) then
-                print *, "All walkers are gone ;-("
+                print *, "DMC: All walkers are gone ;-("
                 stop
              end if
           case(1)
@@ -566,8 +574,9 @@ contains
                 ! add a copy (or copies) of the walker
                 NW=NW+1
                 if ( NW > dmc_data%NWmax ) then
-                   print *, "Too many walkers."
+                   print *, "DMC: Too many walkers.", num
                    stop
+                   !return
                 end if
                 dmc_data%walker(NW)=dmc_data%walker(k)
              end do

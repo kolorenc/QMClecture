@@ -76,7 +76,7 @@ contains
   end subroutine init_sys
 
   pure subroutine EL_drift(sys,wlkr)
-    ! {{{ local energy, drift velocity, wave-function squared
+    ! {{{ local energy, drift velocity, wave function squared
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l, r12l, psiA, psiB, psi, s12, s21
@@ -107,7 +107,7 @@ contains
   end subroutine EL_drift
 
   pure subroutine psiT2(sys,wlkr)
-    ! {{{ trial wave-function squared and local energy
+    ! {{{ trial wave function squared and local energy
     type(t_sys), intent(in) :: sys
     type(t_walker), intent(inout) :: wlkr
     real(dp) :: r1l, r2l, psiA, psiB, psi
