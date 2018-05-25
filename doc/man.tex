@@ -1,0 +1,479 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{lmodern}          % bold tt
+\usepackage{listings,xcolor}  % colored code listing
+\usepackage{amsmath,amssymb}  % blackboard bold
+\usepackage{graphics}
+
+\usepackage[raggedright,small]{titlesec}
+%\def\shang{-.8cm}
+\def\shang{0pt}
+\titlespacing*{\section}{\shang}{*3}{*1}
+\titlespacing*{\subsection}{\shang}{*3}{*1}
+% \titleformat{name=\section}
+%   {\normalfont\large\bfseries}{\hskip\shang\thesection}{.5em}{}{\raggedright}
+% \titleformat{name=\section,numberless}
+%   {\normalfont\large\bfseries}{\hskip\shang}{0em}{}{}
+% \titleformat{name=\subsection}
+%   {\normalfont\bfseries}{\hskip\shang\thesubsection}{.5em}{}{}
+% \titleformat{name=\subsection,numberless}
+%   {\normalfont\bfseries}{\hskip\shang}{0em}{}{}
+
+
+\IfFileExists{mtpro2.sty}{%
+\renewcommand{\rmdefault}{ptm}
+\usepackage[lite,subscriptcorrection]{mtpro2}
+\linespread{1.04}
+}{\relax}
+
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{\relax}
+
+\frenchspacing
+
+\usepackage[square,numbers,sort&compress]{natbib}
+%\bibliographystyle{apsrev4-1}
+\bibliographystyle{apsrev_mod}
+\bibsep=.3em
+
+\usepackage{hyperref}
+\hypersetup{  
+pdftitle={Basic VMC/DMC code for educational purposes},  
+pdfauthor={Jindrich Kolorenc, http://orcid.org/0000-0003-2627-8302},
+pdfkeywords={quantum Monte Carlo, diffusion Monte Carlo, Hylleraas
+  wave function}
+}
+
+%\definecolor{dred}{rgb}{0.4,0.0,0.0}
+%\definecolor{dblue}{rgb}{0.0,0.0,0.5}
+\definecolor{dred}{rgb}{0.53,0.0,0.0}
+\definecolor{dblue}{rgb}{0.14,0.27,0.62}
+
+% I cannot set xleftmargin=\parindent directly because it is not a
+% true constant - it is zero after \noindent etc. Therefore I extract
+% the value of \parindent here.
+\newdimen\xlmargin \xlmargin=\parindent
+\lstset{
+  basicstyle=\ttfamily\color{dred},
+  keywordstyle=\bfseries\color{dblue},
+  commentstyle=\color{dgreen},
+  columns=flexible,
+  language=[95]fortran,
+  morekeywords={true,false},
+  aboveskip=.5em,
+  belowskip=.5em,
+  breaklines=true,
+  breakatwhitespace=true,
+  showspaces=false,
+  showstringspaces=false,
+  escapechar=\%,
+  xleftmargin=\xlmargin
+}
+
+% this puts the code inside a minipage so that no page breaks are allowed
+\lstnewenvironment{lcode}[1][]%
+{
+   \vskip0pt\noindent
+   \minipage{\linewidth} 
+   \lstset{#1}}
+{\endminipage\vskip0pt}
+
+\def\code#1{{\lstinline$#1$}}
+
+\newdimen\configwd \configwd=\linewidth
+\advance\configwd by -\xlmargin
+\def\beginconfig{%
+\vskip.8em\nointerlineskip\noindent%
+\hskip\xlmargin\begingroup\color{dred}\minipage[t]{\configwd}%
+}
+\def\endconfig{\endminipage\endgroup\vskip0.8em\noindent}
+
+\newenvironment{arglist}{
+ \begin{list}{}{
+     \setlength{\topsep}{.6em}
+     \setlength{\itemsep}{.7em}
+     \setlength{\parsep}{0pt}
+     \setlength{\labelwidth}{0pt}
+     \setlength{\labelsep}{0pt}
+     \setlength{\itemindent}{-1em} % hanging first line of an item
+     \setlength{\leftmargin}{1em}
+   }}{
+ \end{list}}
+
+%-----------------------------------------------------------------------------
+% Customization of standard LaTeX article style
+\makeatletter
+
+% figure captions
+\let\captionsize\small
+\newsavebox{\tempbox}
+\def\capfraction{1.0}
+\makeatletter
+\newcommand{\mojec@ption}[2]{
+ \captionsize
+ %\par\vspace{10pt}
+ \vskip\abovecaptionskip
+ \sbox{\tempbox}{{\bfseries #1:} #2}
+ \ifdim \wd\tempbox > \capfraction\linewidth
+  % caption multiline
+   \noindent\hbox to\textwidth{\hfill
+   \parbox[b]{\capfraction\textwidth}{{\bfseries #1:} #2}
+   \hfill}
+ \else
+   % caption singleline
+   \begin{center}#1: #2\end{center}
+ \fi
+ \normalsize
+ \vskip\belowcaptionskip
+}
+\let\@makecaption\mojec@ption
+
+% no heading for table of contents
+\renewcommand\tableofcontents{\@starttoc{toc}}
+
+% header/footer
+\def\ps@simplefoot{
+\def\@oddhead{\hfill}
+\def\@evenhead{\hfill}
+\def\@oddfoot{\hfill\thepage}
+\def\@evenfoot{\thepage\hfill}
+}
+\pagestyle{simplefoot}
+
+\makeatother
+%-----------------------------------------------------------------------------
+
+
+% to make the final PDF searchable also for words containing ligatures
+% (needs pdfTeX 1.4 and newer)
+\IfFileExists{glyphtounicode.tex}{%
+\input glyphtounicode \pdfgentounicode=1
+}{\relax}
+
+\advance\textheight by 1.4cm
+\advance\topmargin by -0.7cm
+\advance\textwidth by 0.6cm
+\advance\oddsidemargin by -0.3cm
+
+\def\Im{\mathop{\rm Im}\nolimits}
+\def\Or{\mathop{\rm O}\nolimits}
+\def\rmd{{\rm d}}
+\def\rmi{{\rm i}}
+\def\rme{{\rm e}}
+
+\begin{document}
+
+\noindent
+\hskip\shang{\Large\bfseries Basic VMC/DMC code for educational purposes}
+\vskip.5em\noindent
+\hskip\shang{\itshape Jind\v rich Koloren\v c, May 2018}
+\vskip1em
+
+\hrule
+\tableofcontents
+\vskip\baselineskip\hrule
+
+\vskip.5em
+\noindent
+
+\section{Configuration file}
+
+There is a separate executable for each of the physical systems to be
+simulated,
+\code{paraHe_run}, \code{othoHe_run}, \code{H2_run} (see below for
+details). Each of these
+programs performs a VMC simulation followed by a DMC simulation. It
+is controlled by a configuration file
+\code{qmc_run.cfg}. It contains name--value pairs (the order of these
+pairs does not matter). The number of wakers and the number of Monte Carlo
+steps are specified as powers of two. The number of walkers is given
+as
+\beginconfig
+\begin{verbatim}
+NW        10
+\end{verbatim}
+\endconfig
+which means that there will be $2^\text{\code{NW}}=2^{10}=1024$
+walkers (strictly in VMC and on average in DMC).
+
+\subsection{VMC}
+The parameters of VMC calculation are specified as
+\beginconfig
+\begin{verbatim}
+VMCtherm  11
+VMCsteps  15
+VMCtstep   0.1
+\end{verbatim}
+\endconfig
+which defines the number of thermalization/equilibration steps as
+$2^\text{\code{VMCtherm}}$ and the number of step when the energy is
+measured as $2^\text{\code{VMCsteps}}$. The ``time step''
+\code{VMCtstep} has a different meaning for the simple Metropolis
+moves and for the diffusion-drift moves. The Metropolis moves are
+performed as
+\begin{equation}
+\mathcal R=\mathcal R'+\xi(\text{\code{VMCtstep}}-0.5)
+\end{equation}
+where $\xi$ is a uniform random number on the interval $[0,1)$. In the
+case of the diffusion-drift moves the meaning is the same as the time
+step in DMC. The value of \code{VMCtstep} should to be chosen
+such that the acceptance ratio of the proposal moves is not too close
+to either 1 or 0.
+
+\subsection{DMC}
+The parameters of the DMC simulation are specified analogously,
+\beginconfig
+\begin{verbatim}
+DMCtherm  12
+DMCsteps  15
+DMCtstep   0.01
+DMCruns    1
+\end{verbatim}
+\endconfig
+Setting the number of DMC runs, \code{DMCruns}, larger than 1 is
+intended to perform the time-step extrapolation to zero. The code runs
+sequential DMC simulations with decreasing time steps
+\begin{multline}
+\text{\code{DMCtstep}},
+\frac{\text{\code{DMCruns}}-1}{\text{\code{DMCruns}}}\,\text{\code{DMCtstep}},
+\frac{\text{\code{DMCruns}}-2}{\text{\code{DMCruns}}}\,\text{\code{DMCtstep}},\dots,\\
+\frac{1}{\text{\code{DMCruns}}}\,\text{\code{DMCtstep}}\,.
+\end{multline}
+The data for the extrapolation are written to \code{tstep_extrap.dat}.
+
+\subsection{System-specific data}
+Finally, the parametes of the simulated physical system need to be
+specified inside the \code{system\{ \}} group. Details are described
+in the next section.
+ 
+
+\section{Available systems}
+
+One can play with three predefined two-electron systems\dots\ or one
+can define his/her own by implementing the appropriate
+\code{qmc_input} module, sec.~\ref{sec:qmc_input}. 
+
+\subsection{\code{paraHe_run}: helium atom (spin singlet)}
+
+The singlet state of helium atom (or helium-like two-electron
+ions) is simulated with the trial wave function having a
+Hylleraas(-like) form
+\begin{equation}
+\Psi_\text{T}(\mathbf r_1,\mathbf r_2)
+ =\biggl(1+\frac12\, r_{12}\biggr)\Bigl[1+a\bigl(r_1^2+r_2^2\bigr)\Bigr]
+   \,\rme^{-Z(r_1+r_2)}
+\end{equation}
+with a single variational parameter $a$. It fullfils the electron-ion
+and electron-electron cusp conditions for any $a$.
+
+The \code{system\{ \}} group in the configuration file
+\code{qmc_run.cfg} has the following content
+\beginconfig
+\begin{verbatim}
+system { Znuc 2.0  a 0.0 }
+\end{verbatim}
+\endconfig
+This example specifies that the nuclear charge is
+$Z=\text{\code{Znuc}}=2.0$ (mandatory parameter)
+and the variational parameter in the Hyleraas ansatz is
+$a=\text{\code{a}}=0.0$. If the parameter $a$ is not given, the code
+takes the optimal value that minimizes the total energy.
+
+The total energy corresponding to this $\Psi_\text{T}$ can be
+evaluated analytically. It can be written as
+\begin{equation}
+E=\frac{Z}{4}\,\frac{A}{B}
+\end{equation}
+where
+\begin{align}
+A&=
+  -3 a^2 \Bigl\{4 Z \bigl[Z (2176 Z+6903)+4992\bigr]-10065\Bigr\}\nonumber\\
+ &\qquad -8 a Z^2 \Bigl\{32 Z \bigl[8 Z (3 Z+7)+27\bigr]-567\Bigr\}\nonumber\\
+ &\qquad -8 Z^4\Bigl\{4 Z \bigl[Z (16 Z+25)+4\bigr]-35\Bigr\}\,,\\
+B&= 9 a^2 \bigl[Z (896 Z+3355)+3680\bigr]\nonumber\\
+ &\qquad +24 a Z^2\bigl[Z (64 Z+189)+168\bigr]
+  +8Z^4 \bigl[Z (16 Z+35)+24\bigr]
+\end{align}
+The derivative of the total energy with respect to $a$ is $\partial
+E/\partial a=8 Z^3 C/B^2$ where
+\begin{align}
+C&=9 a^2 \Biggl\{Z \biggl[Z \Bigl[Z \bigl[4096 Z (8 Z+47)+413413\bigr]+304160\Bigr]-43776\biggr]-98910\Biggr\}\nonumber\\
+&\quad +12 a Z^2 \Biggl\{2 Z \biggl[Z \Bigl[Z \bigl[8 Z (256 Z+1301)+16329\bigr]-1848\Bigr]-18912\biggr]-18105\Biggr\}\nonumber\\
+&\quad -8 Z^4 \biggl\{Z \Bigl[Z \bigl[Z (16 Z+737)+2856\bigr]+3168\Bigr]+1008\biggr\}\,.
+\end{align}
+To find the optimal $a$ that minimizes the total energy we need to
+solve the equation $\partial E/\partial a=0$, which is straightforward
+since is is just a quadratic equation (only the final formula is too
+long to be explicitly written here).
+% \begin{equation}
+% a_\text{opt}=\frac{2 \left(\sqrt{Z^4 (2 Z (Z (Z (Z (Z (Z (16 Z (8 Z (512 Z (128
+%    Z+1309)+2950393)+56671967)+1264584679)+1064874760)+733280304)+7
+%    30902672)+667667520)+327330432)+128388465)}+(18105-2 Z (Z (Z (8
+%    Z (256 Z+1301)+16329)-1848)-18912)) Z^2\right)}{3 (Z (Z (Z
+%    (4096 Z (8 Z+47)+413413)+304160)-43776)-98910)}
+% \end{equation}
+
+
+
+\subsection{\code{orthoHe_run}: helium atom (spin triplet)}
+
+The triplet state of the helium atom (or a helium-like two-electron
+ion) has an antisymmetric wave function and one can thus investigate
+the behavior of the fixed-node constraint. The wave function is
+approximated by a Slater determinant constructed from 1s and 2s
+orbitals,
+\begin{equation}
+\Psi_\text{T}(\mathbf r_1,\mathbf r_2)=
+  \psi_\text{1s}(r_1) \psi_\text{2s}(r_2)
+ -\psi_\text{1s}(r_2) \psi_\text{2s}(r_1)\,,
+\end{equation}
+where
+\begin{equation}
+\psi_\text{1s}(r)=\rme^{-Z_1r}
+\quad\text{and}\quad
+\psi_\text{2s}(r)=\biggl(1-\frac{Z_2 r}{2}\biggr)\rme^{-Z_2 r/2}\,.
+\end{equation}
+The system is so simple that the nodal hypersurface is entirely
+determined by symmetry and it is specified by a condition
+$r_1=r_2$. Note that the complete nodal surface is much larger than
+the obvious node defined by electron coincidence $\mathbf r_1=\mathbf
+r_2$! Our trial function has the exact nodes even though it is
+certainly not the exact ground state.
+
+In the \code{system\{ \}} group in the
+configuration file \code{qmc_run.cfg} one can specify three parameters
+\beginconfig
+\begin{verbatim}
+system {
+  Znuc 2.0
+  Z1   1.99364
+  Z2   1.55094
+}
+\end{verbatim}
+\endconfig
+Only the nuclear charge \code{Znuc} is mandatory, the charges in the
+wave function are optional. If they are not given,
+\code{Z1}${}={}$\code{Z2}${}={}$\code{Znuc} is used. For VMC one can
+treat \code{Z1} and \code{Z2} as variational parameters (the optimal
+values are shown in the example above) but for DMC it is better to
+satisfy the electron-nucleus cusp conditions by keeping \code{Z1} and
+\code{Z2} equal to the charge of the nucleus. For satisfying also the
+electron-electron cusp conditions we would need to include a
+correlation factor.
+
+
+\subsection{\code{H2_run}: hydrogen molecule}
+
+The hydrogen molecule is simulated with the Heitler--London trial wave
+function
+\begin{equation}
+\Psi_\text{T}(\mathbf r_1,\mathbf r_2)=
+ \rme^{-|\mathbf r_1-\mathbf r_A|-|\mathbf r_2-\mathbf r_B|}
++\rme^{-|\mathbf r_2-\mathbf r_A|-|\mathbf r_1-\mathbf r_B|}\,,
+\end{equation}
+where $\mathbf r_A$ is the position of one nucleus and $\mathbf r_B$
+is the position of the other nucleus. This ansatz does not fulfill the
+electron-electron cusp conditions and it has only part of the
+electron-nucleus cusps.
+
+The only parameter that can be (and must be) specified in the
+\code{system\{ \}} group is the distance between the nuclei
+$R=|\mathbf r_A-\mathbf r_B|$,
+\beginconfig
+\begin{verbatim}
+system { R  1.4 }
+\end{verbatim}
+\endconfig
+One can map out the bonding curve by running separate simulations for
+different values $R$.
+
+\section{Output}
+
+Apart from the information written to STDOUT, the program writes
+several files to the disk.
+
+\subsection{\code{Evmc_trace.dat}}
+
+The average of the total energy across the walker population at each
+step of the VMC simulation (the thermalization period is not saved).
+
+\subsection{\code{Edmc_trace.dat}}
+
+The average of the total energy across the walker population at each
+step of the DMC simulation (the initial projection period is not
+saved).
+
+\subsection{\code{NWdmc_trace.dat}}
+
+The size of the walker population at each step of the DMC simulation
+(the initial projection period is not saved).
+
+
+\subsection{\code{Evmc_reblock.dat}, \code{Edmc_reblock.dat}}
+
+Estimation of the error bar for the total energy in VMC and DMC
+simulations by the blocking method -- two neighboring blocks
+are merged into one and the number of blocks is thus halved at each
+step. The file shows the error bar as a function of the
+number of remaining blocks.
+
+\subsection{\code{E2vmc_reblock.dat}, \code{E2dmc_reblock.dat}}
+
+Estimation of the error bar of the variance
+\begin{equation}
+\frac{%
+\langle\Psi_\text{T}|\hat H^2|\Psi_\text{T}\rangle
+ - \langle\Psi_\text{T}|\hat H|\Psi_\text{T}\rangle^2
+}{%
+\langle\Psi_\text{T}|\Psi_\text{T}\rangle
+}
+\end{equation}
+which measures the quality of the trial wave function.
+
+\subsection{\code{tstep_extrap.dat}}
+
+DMC energy as a function of the sime step (if \code{DMCruns}${}>1$).
+
+
+
+\section{Source code}
+
+The source code (Fortran) is split to several files. There is a fair
+amount of comments in the code so it should be possible to figure out
+how the program works.
+
+\subsection{\code{qmc_run.F90}}
+
+The top-level driver that calls the VMC and DMC algorithms on the
+given physical system.
+
+\subsection{\code{qmc.F90}}
+
+Implementation of the VMC and DMC methods. The subroutines
+\code{vmc_run()} and \code{dmc_run()} are multithreaded.
+
+\subsection{\code{reblocking.f90}}
+
+Implementation of the blocking method.
+
+\subsection{\code{rnd.f90}}
+
+Pseudorandom number generator.
+
+\subsection{\code{paraHe_input.f90}, \code{orthoHe_input.f90},
+  \code{H2_input.f90}}
+\label{sec:qmc_input}
+
+Calculation of the wave function $\Psi_\text{T}(\mathcal R)$, the local
+energy $E_\text{L}=\bigl[\hat H \Psi_\text{T}(\mathcal
+R)\bigr]/\Psi_\text{T}(\mathcal R)$ and the drift velocity
+$v_\text{D}=\nabla\ln |\Psi_\text{T}(\mathcal R)|$. Each of these
+files implements an instance of \code{qmc_input} module.
+
+\subsection{\code{types_const.f90}}
+
+Constants and utility routines.
+
+
+
+\bibliography{dft,dmft,lanczos,aim}
+
+\end{document}
