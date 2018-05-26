@@ -1,5 +1,16 @@
-This tree requires the files from the library cfparser to be located in the
-directory 'cfparser'. It makes little sense to track the cfparser files in
-this repository. 
+ABOUT
 
-The software is released under MIT/X11 license.
+  Basic VMC and DMC code meant for educational and demonstration purposes.
+  See doc/man.pdf for more details.
+
+COMPILATION
+
+  Create 'make/default.mk' with appropriate compiler definitions. There are
+  several examples in the 'make' directory. Afterwards, executing 'make'
+  should build the software. Alternatively, one can skip the make/default.mk
+  and execute 'make PLATFORM=gnu', for instance, which would take compiler
+  definitions from 'make/gnu.mk'.
+
+LICENSE
+
+  The software is released under MIT/X11 license.

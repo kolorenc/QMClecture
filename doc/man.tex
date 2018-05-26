@@ -1,8 +1,7 @@
-\documentclass[12pt,a4paper]{article}
+\documentclass[12pt,a4paper,twoside]{article}
 \usepackage{lmodern}          % bold tt
 \usepackage{listings,xcolor}  % colored code listing
-\usepackage{amsmath,amssymb}  % blackboard bold
-\usepackage{graphics}
+\usepackage{amsmath}
 
 \usepackage[raggedright,small]{titlesec}
 %\def\shang{-.8cm}
@@ -38,12 +37,10 @@
 \hypersetup{  
 pdftitle={Basic VMC/DMC code for educational purposes},  
 pdfauthor={Jindrich Kolorenc, http://orcid.org/0000-0003-2627-8302},
-pdfkeywords={quantum Monte Carlo, diffusion Monte Carlo, Hylleraas
-  wave function}
+pdfkeywords={quantum Monte Carlo, diffusion Monte Carlo, VMC, DMC,
+  Hylleraas wave function}
 }
 
-%\definecolor{dred}{rgb}{0.4,0.0,0.0}
-%\definecolor{dblue}{rgb}{0.0,0.0,0.5}
 \definecolor{dred}{rgb}{0.53,0.0,0.0}
 \definecolor{dblue}{rgb}{0.14,0.27,0.62}
 
@@ -86,45 +83,9 @@ pdfkeywords={quantum Monte Carlo, diffusion Monte Carlo, Hylleraas
 }
 \def\endconfig{\endminipage\endgroup\vskip0.8em\noindent}
 
-\newenvironment{arglist}{
- \begin{list}{}{
-     \setlength{\topsep}{.6em}
-     \setlength{\itemsep}{.7em}
-     \setlength{\parsep}{0pt}
-     \setlength{\labelwidth}{0pt}
-     \setlength{\labelsep}{0pt}
-     \setlength{\itemindent}{-1em} % hanging first line of an item
-     \setlength{\leftmargin}{1em}
-   }}{
- \end{list}}
-
 %-----------------------------------------------------------------------------
 % Customization of standard LaTeX article style
 \makeatletter
-
-% figure captions
-\let\captionsize\small
-\newsavebox{\tempbox}
-\def\capfraction{1.0}
-\makeatletter
-\newcommand{\mojec@ption}[2]{
- \captionsize
- %\par\vspace{10pt}
- \vskip\abovecaptionskip
- \sbox{\tempbox}{{\bfseries #1:} #2}
- \ifdim \wd\tempbox > \capfraction\linewidth
-  % caption multiline
-   \noindent\hbox to\textwidth{\hfill
-   \parbox[b]{\capfraction\textwidth}{{\bfseries #1:} #2}
-   \hfill}
- \else
-   % caption singleline
-   \begin{center}#1: #2\end{center}
- \fi
- \normalsize
- \vskip\belowcaptionskip
-}
-\let\@makecaption\mojec@ption
 
 % no heading for table of contents
 \renewcommand\tableofcontents{\@starttoc{toc}}
@@ -152,6 +113,7 @@ pdfkeywords={quantum Monte Carlo, diffusion Monte Carlo, Hylleraas
 \advance\topmargin by -0.7cm
 \advance\textwidth by 0.6cm
 \advance\oddsidemargin by -0.3cm
+\advance\evensidemargin by -0.3cm
 
 \def\Im{\mathop{\rm Im}\nolimits}
 \def\Or{\mathop{\rm O}\nolimits}
@@ -305,7 +267,7 @@ C&=9 a^2 \Biggl\{Z \biggl[Z \Bigl[Z \bigl[4096 Z (8 Z+47)+413413\bigr]+304160\Bi
 \end{align}
 To find the optimal $a$ that minimizes the total energy we need to
 solve $\partial E/\partial a=0$ for $a$, which is straightforward
-since is is just a quadratic equation (only the final formula is too
+since it is just a quadratic equation (only the final formula is too
 long to be explicitly written here).
 % \begin{equation}
 % a_\text{opt}=\frac{2 \left(\sqrt{Z^4 (2 Z (Z (Z (Z (Z (Z (16 Z (8 Z (512 Z (128
