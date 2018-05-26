@@ -14,7 +14,7 @@ all: bin
 bin: cfparser/libcfparser.a $(BIN)
 
 cfparser/libcfparser.a:
-	test ! -d cfparser || ( cd cfparser && make )
+	test ! -d cfparser || ( cd cfparser && make lib )
 
 $(SYS)_run: qmc_run.o $(OBJ)
 	@echo Linking $@
