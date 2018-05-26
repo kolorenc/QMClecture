@@ -1,9 +1,18 @@
 ! ==========================================================================
-! Error bars estimated with the reblocking method [Flyvbjerg & Petersen,
-! J. Chem. Phys. 91, 461-6 (1989)].
+!
+! Basic VMC/DMC code for educational purposes.
+! This file: estimation of error bars from correlated data.
+!
+! Copyright (C) 2012 Jindrich Kolorenc
+!
+! The software is released under MIT/X11 license.
+!
+! ==========================================================================
+
+! The error bars are estimated with the blocking method [Flyvbjerg &
+! Petersen, J. Chem. Phys. 91, 461-6 (1989)].
 ! The subroutines assume that we start with 2^N data points (the reblocking
 ! is done by pairing the points/blocks).
-! ==========================================================================
 
 module reblocking
   use types_const, only: dp
@@ -58,7 +67,7 @@ contains
        call reblock(A(1:dim))
        dim=dim/2
        s1=varmean(A(1:dim),mean)
-       if ( writeout ) write(unit=99,fmt=*) dim, s, sqrt(s)
+       if ( writeout ) write(unit=99,fmt=*) dim, s1, sqrt(s1)
        if ( s1 <= s ) exit
        s=s1
     end do
