@@ -16,8 +16,13 @@
 ! possible in standard Fortran95. It is defined as TR15581 extension to F95
 ! (which is a part of F03).
 
+! diffusion-drift moves in VMC (default is Metropolis)
 #define VMC_DIFFUSION_DRIFT 1
-#define ET_RUNNING_AVERAGE 1
+
+! what quantity should be used in population control: average over the walker
+! population at a given time (default) or over the entire  history ("running
+! average")
+!#define ET_RUNNING_AVERAGE 1
 
 module qmc
   use types_const, only: dp, i8b
@@ -570,6 +575,7 @@ contains
              ! one walker continues, do nothing here
           case default
              ! walker will be spawned
+             if ( num > 2 ) print *, "spawned", num, dmc_data%walker(k)%r
               do j=2, num
                 ! add a copy (or copies) of the walker
                 NW=NW+1
@@ -598,7 +604,7 @@ contains
 #else
        ! trial energy as an average over the population at each time step (this
        ! should fluctuate more but these fluctuations are possibly overshadowed
-       ! by the population-control term enyway)
+       ! by the population-control term anyway)
        dmc_data%ET=Etot-log(NW*1.0_dp/dmc_data%NWopt)
 #endif
 
