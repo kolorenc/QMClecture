@@ -102,7 +102,7 @@
   \bibfield  {author} {\bibinfo {author} {\bibfnamefont {D.}~\bibnamefont
   {Bressanini}}\ and\ \bibinfo {author} {\bibfnamefont {P.~J.}\ \bibnamefont
   {Reynolds}},\ }\bibfield  {title} {\emph {\bibinfo {title} {Unexpected
-  symmetry in the nodal structure of the he atom}},\ }\href
+  symmetry in the nodal structure of the {He} atom}},\ }\href
   {\doibase10.1103/PhysRevLett.95.110201} {\bibfield  {journal} {\bibinfo
   {journal} {Phys. Rev. Lett.}\ }\textbf {\bibinfo {volume} {95}},\ \bibinfo
   {pages} {110201} (\bibinfo {year} {2005})}\BibitemShut {NoStop}%
